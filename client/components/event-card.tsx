@@ -13,7 +13,7 @@ export default function EventCard({
 }: EventCardProps) {
   return (
     <article className="overflow-hidden rounded-3xl bg-transparent shadow-xl m-3">
-      <div className="relative aspect-[16/10]">
+      <div className="relative aspect-[4/3]">
         {image ? (
           <Image
             src={image}
@@ -31,11 +31,11 @@ export default function EventCard({
         )}
       </div>
 
-      <div className="px-8 py-5">
-        <div className="mb-2 flex items-start justify-between gap-3">
+      <div className="px-10 py-3 -translate-x-5">
+        <div className="my-2 flex items-start justify-between">
           <h3 className="text-2xl font-extrabold leading-tight text-black">{eventName}</h3>
           <button type="button" aria-label="Bookmark event">
-            <FaRegBookmark className="h-6 w-4 mt-1 ml-3 text-black hover:fill-red-600" />
+            <FaRegBookmark className="h-8 w-8 translate-x-10 text-black hover:fill-red-600" />
           </button>
         </div>
 
@@ -57,7 +57,7 @@ export default function EventCard({
         <div className="flex justify-end mt-4">
           <button
             type="button"
-            className="rounded-full bg-red-600 mt-5 px-9 py-2 text-base font-semibold text-white shadow-sm hover:scale-105 duration-300"
+            className="rounded-2xl translate-x-8 bg-red-600 px-9 py-2 text-base font-semibold text-white shadow-sm hover:scale-105 duration-300"
           >
             View
           </button>

@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export default function About() {
   return (
     <div className="flex flex-col items-center justify-between min-h-screen pt-20 overflow-hidden">
@@ -15,7 +17,8 @@ export default function About() {
           never goes to waste.
         </p>
       </div>
-      <footer className="min-w-screen bg-red-600 p-10">
+      <Image src="/terrier_about.png" width={500} height={500} alt="terrier" />
+      <footer className="min-w-screen bg-red-700 p-10">
         <p className="max-w-6xl mx-auto text-center text-white font-bold text-xl">
           Explore Events: See what’s available near you by time, location, and food type. Post Leftovers: Hosting an
           event? <br />
