@@ -10,6 +10,7 @@ export default function EventCard({
   timeframe,
   quantity,
   image,
+  tags,
 }: EventCardProps) {
   return (
     <article className="overflow-hidden rounded-3xl bg-transparent shadow-xl m-3">
@@ -54,10 +55,22 @@ export default function EventCard({
           <p className="mt-1 text-sm text-black">Quantity Remaining: {quantity}</p>
         </div>
 
-        <div className="flex justify-end mt-4">
+        <div className="mt-4 flex items-center">
+          {Array.isArray(tags) && tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {tags.slice(0, 2).map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
           <button
             type="button"
-            className="rounded-2xl translate-x-8 bg-red-600 px-9 py-2 text-base font-semibold text-white shadow-sm hover:scale-105 duration-300"
+            className="ml-auto rounded-xl translate-x-6 bg-red-600 px-6 py-2 font-semibold text-white shadow-sm hover:scale-105 duration-300"
           >
             View
           </button>

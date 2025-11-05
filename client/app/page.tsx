@@ -17,6 +17,7 @@ export default function Home() {
       foodType: "Pizza",
       timeframe: "2:00 PM to 3:00 PM",
       quantity: 12,
+      tags: ["Vegetarian", "Warm"],
     },
     {
       eventName: "Bagels & Coffee",
@@ -25,6 +26,7 @@ export default function Home() {
       foodType: "Bagels, Coffee",
       timeframe: "9:00 AM to 10:30 AM",
       quantity: 24,
+      tags: ["Breakfast", "Kosher"],
     },
     {
       eventName: "Sandwiches",
@@ -33,6 +35,7 @@ export default function Home() {
       foodType: "Assorted Sandwiches",
       timeframe: "12:15 PM to 1:30 PM",
       quantity: 18,
+      tags: ["Halal"],
     },
     {
       eventName: "Vegan Bowls",
@@ -41,6 +44,7 @@ export default function Home() {
       foodType: "Vegan Grain Bowls",
       timeframe: "1:00 PM to 2:00 PM",
       quantity: 10,
+      tags: ["Vegan", "Gluten-Free"],
     },
     {
       eventName: "Donut Drop",
@@ -49,6 +53,7 @@ export default function Home() {
       foodType: "Assorted Donuts",
       timeframe: "8:00 AM to 9:00 AM",
       quantity: 36,
+      tags: ["Sweet"],
     },
     {
       eventName: "Taco Night",
@@ -57,6 +62,7 @@ export default function Home() {
       foodType: "Tacos",
       timeframe: "6:00 PM to 7:30 PM",
       quantity: 40,
+      tags: ["Spicy", "Halal"],
     },
     {
       eventName: "Dubai Chocolate",
@@ -65,6 +71,7 @@ export default function Home() {
       foodType: "Assorted Donuts",
       timeframe: "8:00 AM to 9:00 AM",
       quantity: 36,
+      tags: ["Imported"],
     },
     {
       eventName: "Hey Tea",
@@ -73,6 +80,7 @@ export default function Home() {
       foodType: "Tacos",
       timeframe: "6:00 PM to 7:30 PM",
       quantity: 40,
+      tags: ["Drinks"],
     },
   ];
 
@@ -117,6 +125,7 @@ export default function Home() {
               timeframe={e.timeframe}
               quantity={e.quantity}
               image={e.image}
+              tags={e.tags}
             />
           ))}
         </div>

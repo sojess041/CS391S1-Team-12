@@ -6,4 +6,5 @@ export type EventCardProps = {
   timeframe: string;
   quantity: number;
   image?: string;
+  tags?: string[]; 
 };

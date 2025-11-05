@@ -1,4 +1,5 @@
 "use client";
+import { FaCircleUser } from "react-icons/fa6";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -9,6 +10,7 @@ export default function Navbar() {
     { href: "/", label: "Explore" },
     { href: "/post", label: "Post" },
     { href: "/about", label: "About" },
+    { href: "/login", label: <FaCircleUser /> },
   ];
 
   return (

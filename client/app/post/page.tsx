@@ -31,12 +31,8 @@ export default function Post() {
 
   return (
     <div className="relative min-h-screen">
-      <div className="pointer-events-none absolute top-0 right-[15px] -z-10 hidden md:block" aria-hidden="true">
-        <Image src="/terrier_form.png" alt="terriers" width={300} height={300} priority />
-      </div>
-
       <div
-        className="pointer-events-none absolute rotate-[10deg] bottom-0 left-[30px] -z-10 hidden md:block"
+        className="pointer-events-none absolute bottom-0 right-[80px] -z-10 hidden md:block"
         aria-hidden="true"
       >
         <Image src="/terrier_4.png" alt="terriers" width={200} height={200} priority />
