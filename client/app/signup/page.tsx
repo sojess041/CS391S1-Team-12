@@ -1,0 +1,204 @@
+"use client";
+
+import { useState, ChangeEvent, FormEvent } from "react";
+import Link from "next/link";
+import { FcGoogle } from "react-icons/fc";
+import { FaGithub } from "react-icons/fa";
+import { FiEye, FiEyeOff } from "react-icons/fi";
+
+export default function SignUpPage() {
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirm: "",
+    role: "",
+  });
+  const [showPwd, setShowPwd] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (form.password !== form.confirm) {
+      alert("Passwords do not match");
+      return;
+    }
+    if (!form.role) {
+      alert("Please select an account type");
+      return;
+    }
+    console.log("Sign up submitted", form);
+  };
+
+  return (
+    <div className="w-full max-w-3xl border border-gray-200 rounded-xl shadow-md p-10 sm:p-16 mx-auto mt-12">
+      <h1 className="text-3xl font-semibold text-center">
+        Sign Up for Spark<span className="text-red-600">!Bytes</span>
+      </h1>
+      <p className="italic text-center mt-2">
+        Welcome to Spark!Bytes! Please create an account to reserve food and post events.
+      </p>
+
+      <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+        <div className="w-full">
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+            Full Name <span className="text-red-600">*</span>
+          </label>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            value={form.name}
+            onChange={handleChange}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none"
+            placeholder="Full Name"
+            required
+          />
+        </div>
+
+        <div className="w-full">
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            BU Email Address <span className="text-red-600">*</span>
+          </label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none"
+            placeholder="BU Email Address"
+            autoComplete="email"
+            required
+          />
+        </div>
+
+        <div className="w-full">
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            Password <span className="text-red-600">*</span>
+          </label>
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={showPwd ? "text" : "password"}
+              value={form.password}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:outline-none"
+              placeholder="Password"
+              autoComplete="new-password"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPwd((s) => !s)}
+              className="absolute inset-y-0 right-2 my-auto p-1 text-gray-600"
+              aria-label={showPwd ? "Hide password" : "Show password"}
+            >
+              {showPwd ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+            </button>
+          </div>
+        </div>
+
+        <div className="w-full">
+          <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-1">
+            Confirm Password <span className="text-red-600">*</span>
+          </label>
+          <div className="relative">
+            <input
+              id="confirm"
+              name="confirm"
+              type={showConfirm ? "text" : "password"}
+              value={form.confirm}
+              onChange={handleChange}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:outline-none"
+              placeholder="Confirm Password"
+              autoComplete="new-password"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm((s) => !s)}
+              className="absolute inset-y-0 right-2 my-auto p-1 text-gray-600"
+              aria-label={showConfirm ? "Hide password" : "Show password"}
+            >
+              {showConfirm ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
+            </button>
+          </div>
+        </div>
+
+        <fieldset className="w-full">
+          <legend className="block text-sm font-semibold text-gray-800 mb-2">
+            Account Type<span className="text-red-600">*</span>
+          </legend>
+          <div className="flex items-center gap-6 text-gray-800">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="role"
+                value="student"
+                checked={form.role === "student"}
+                onChange={() => setForm((prev) => ({ ...prev, role: "student" }))}
+                className="h-4 w-4 border-gray-300"
+              />
+              Student
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="role"
+                value="organizer"
+                checked={form.role === "organizer"}
+                onChange={() => setForm((prev) => ({ ...prev, role: "organizer" }))}
+                className="h-4 w-4 border-gray-300"
+              />
+              Event Organizer
+            </label>
+          </div>
+        </fieldset>
+
+        <button
+          type="submit"
+          className="mt-2 w-full rounded-lg bg-red-600 text-white font-semibold py-2 shadow-sm hover:shadow-md transition-shadow"
+        >
+          Sign Up
+        </button>
+
+        <div className="flex items-center w-full mt-4">
+          <hr className="flex-grow border-gray-300" />
+          <span className="mx-4 text-sm text-gray-600">Or sign up with</span>
+          <hr className="flex-grow border-gray-300" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <button
+            type="button"
+            className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
+          >
+            <FcGoogle className="h-5 w-5" aria-hidden />
+            Google
+          </button>
+          <button
+            type="button"
+            className="flex items-center justify-center gap-2 rounded-lg bg-black px-3 py-2 text-sm font-medium text-white hover:bg-gray-900 cursor-pointer"
+          >
+            <FaGithub className="h-5 w-5" aria-hidden />
+            GitHub
+          </button>
+        </div>
+
+        <p className="text-center mt-6 text-sm text-gray-700">
+          Already have an account?{" "}
+          <Link href="/login" className="font-medium text-red-600 hover:text-red-700 underline underline-offset-4">
+            Log in
+          </Link>
+        </p>
+      </form>
+    </div>
+  );
+}
