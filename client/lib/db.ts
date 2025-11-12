@@ -1,56 +1,54 @@
 import { supabase } from './supabase';
 import { Event, EventWithOrganizer, User, Reservation, DietaryRestriction } from '@/types/database';
 
-// Helper function to check if arrays overlap (for food restriction filtering)
-function arraysOverlap(arr1: string[], arr2: string[]): boolean {
-  if (arr1.length === 0 || arr2.length === 0) return true;
-  return arr1.some(item => arr2.includes(item));
+type VisibleEventRow = Event & {
+  organizer_full_name: string;
+  organizer_email: string;
+};
+
+function mapVisibleEvent(row: VisibleEventRow): EventWithOrganizer {
+  const { organizer_full_name, organizer_email, ...event } = row;
+  return {
+    ...event,
+    organizer: {
+      full_name: organizer_full_name,
+      email: organizer_email,
+    },
+  };
+}
+
+async function fetchVisibleEvents(params: {
+  userId?: string | null;
+  searchTerm?: string | null;
+} = {}): Promise<EventWithOrganizer[]> {
+  const { userId = null, searchTerm = null } = params;
+  const normalizedSearch = searchTerm?.trim();
+
+  const rpcPayload: {
+    user_id: string | null;
+    search_term?: string | null;
+  } = {
+    user_id: userId,
+  };
+
+  if (normalizedSearch) {
+    rpcPayload.search_term = normalizedSearch;
+  }
+
+  const { data, error } = await supabase.rpc('get_visible_events', rpcPayload);
+
+  if (error) {
+    console.error('Error fetching events with dietary filters:', error);
+    throw error;
+  }
+
+  const rows = (data || []) as VisibleEventRow[];
+  return rows.map(mapVisibleEvent);
 }
 
 // Get events filtered by user's food restrictions
 export async function getEvents(userId?: string | null): Promise<EventWithOrganizer[]> {
-  const { data, error } = await supabase
-    .from('events')
-    .select(`
-      *,
-      organizer:users!events_organizer_id_fkey (
-        full_name,
-        email
-      )
-    `)
-    .eq('is_active', true)
-    .order('event_date', { ascending: true });
-
-  if (error) {
-    console.error('Error fetching events:', error);
-    throw error;
-  }
-
-  let events = (data || []) as EventWithOrganizer[];
-
-  // If user is logged in, filter by their food restrictions
-  if (userId) {
-    const { data: user } = await supabase
-      .from('users')
-      .select('food_restrictions')
-      .eq('id', userId)
-      .single();
-
-    if (user && user.food_restrictions && user.food_restrictions.length > 0) {
-      // Filter events where event_tags overlaps with user's food_restrictions
-      // Show events that have at least one matching tag, or events with no dietary tags
-      events = events.filter(event => {
-        // If event has no tags, show it to everyone
-        if (!event.event_tags || event.event_tags.length === 0) {
-          return true;
-        }
-        // Check if any event tag matches any user restriction
-        return arraysOverlap(event.event_tags, user.food_restrictions);
-      });
-    }
-  }
-
-  return events;
+  return fetchVisibleEvents({ userId });
 }
 
 // Get a single event by ID
@@ -81,48 +79,10 @@ export async function searchEvents(
   searchQuery: string,
   userId?: string | null
 ): Promise<EventWithOrganizer[]> {
-  const { data, error } = await supabase
-    .from('events')
-    .select(`
-      *,
-      organizer:users!events_organizer_id_fkey (
-        full_name,
-        email
-      )
-    `)
-    .eq('is_active', true)
-    .or(`event_name.ilike.%${searchQuery}%,event_location.ilike.%${searchQuery}%,food_type.ilike.%${searchQuery}%,event_description.ilike.%${searchQuery}%`)
-    .order('event_date', { ascending: true });
-
-  if (error) {
-    console.error('Error searching events:', error);
-    throw error;
-  }
-
-  let events = (data || []) as EventWithOrganizer[];
-
-  // Apply food restriction filtering if user is logged in
-  if (userId) {
-    const { data: user } = await supabase
-      .from('users')
-      .select('food_restrictions')
-      .eq('id', userId)
-      .single();
-
-    if (user && user.food_restrictions && user.food_restrictions.length > 0) {
-      // Filter events where event_tags overlaps with user's food_restrictions
-      events = events.filter(event => {
-        // If event has no tags, show it to everyone
-        if (!event.event_tags || event.event_tags.length === 0) {
-          return true;
-        }
-        // Check if any event tag matches any user restriction
-        return arraysOverlap(event.event_tags, user.food_restrictions);
-      });
-    }
-  }
-
-  return events;
+  return fetchVisibleEvents({
+    userId,
+    searchTerm: searchQuery,
+  });
 }
 
 // Create a new event
@@ -281,4 +241,3 @@ export async function getUserReservations(userId: string): Promise<Reservation[]
 
   return (data || []) as Reservation[];
 }
-

@@ -18,7 +18,12 @@
 - Users with no restrictions see all events
 - Events with no dietary tags are visible to everyone
 
-### 3. Code Structure
+### 3. Server-Side Filtering Helper
+- `public.get_visible_events` Postgres function enforces dietary restriction logic directly in SQL
+- Optional search term filtering is baked in, so API consumers get consistent results whether browsing or searching
+- Organizer contact info is joined in the function, meaning the UI only needs one round-trip per listing
+
+### 4. Code Structure
 - Supabase client setup (lib/supabase.ts)
 - Database helper functions (lib/db.ts) with filtering logic
 - TypeScript types (types/database.ts)
@@ -38,8 +43,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzd
 1. Go to your Supabase dashboard: https://supabase.com/dashboard
 2. Select your project (exzflisfpzytbqydausf)
 3. Navigate to SQL Editor
-4. Copy and paste the contents of client/supabase/schema.sql
-5. Click Run to execute the schema
+4. Copy and paste the contents of `client/supabase/schema.sql`
+5. Click Run to execute the schema (rerun whenever this file changes so Supabase picks up helpers like `get_visible_events`)
 
 ### 3. Integrate Database Functions
 The following functions are ready to use in your components:
@@ -127,8 +132,7 @@ const event = await createEvent({
 
 ## Notes
 
-- The filtering happens in JavaScript after fetching events (for flexibility)
-- For better performance at scale, consider moving filtering to SQL using PostgreSQL array operators
+- Dietary filtering + search now run in SQL via `public.get_visible_events`, which keeps payloads small and results consistent
 - Dietary restrictions are optional - users can leave them blank to see all events
 - Event tags can include both dietary restrictions and descriptive tags (e.g., 'warm', 'sweet')
-
+- Re-run the schema SQL whenever you update `client/supabase/schema.sql` so Supabase stays in sync
