@@ -9,3 +9,12 @@ export type FormData = {
   eventTags?: string;
   eventImage?: string;
 };
+
+export type SignUpFormData = {
+  name: string;
+  email: string;
+  password: string;
+  confirm: string;
+  role: 'student' | 'organizer';
+  foodRestrictions?: string[];
+};
