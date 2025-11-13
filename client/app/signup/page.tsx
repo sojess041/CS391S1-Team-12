@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { DIETARY_RESTRICTIONS } from "@/lib/constants";
 
 export default function SignUpPage() {
   const [form, setForm] = useState({
@@ -13,13 +14,25 @@ export default function SignUpPage() {
     password: "",
     confirm: "",
     role: "",
+    foodRestrictions: [] as string[],
   });
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    if (type === "checkbox") {
+      if (name === "foodRestriction") {
+        setForm((prev) => {
+          const restrictions = checked
+            ? [...prev.foodRestrictions, value]
+            : prev.foodRestrictions.filter((r) => r !== value);
+          return { ...prev, foodRestrictions: restrictions };
+        });
+      }
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -159,6 +172,30 @@ export default function SignUpPage() {
               />
               Event Organizer
             </label>
+          </div>
+        </fieldset>
+
+        <fieldset className="w-full">
+          <legend className="block text-sm font-semibold text-gray-800 mb-2">
+            Dietary Restrictions <span className="text-sm font-normal text-gray-600">(Optional - Select all that apply)</span>
+          </legend>
+          <p className="text-xs text-gray-600 mb-3">
+            We'll filter events to show only those that match your dietary needs. Leave blank to see all events.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {DIETARY_RESTRICTIONS.map((option) => (
+              <label key={option.value} className="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  name="foodRestriction"
+                  value={option.value}
+                  checked={form.foodRestrictions.includes(option.value)}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                />
+                {option.label}
+              </label>
+            ))}
           </div>
         </fieldset>
 
