@@ -35,13 +35,19 @@
 ### 1. Set Up Environment Variables
 Create `.env.local` in the `client` directory:
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://exzflisfpzytbqydausf.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4emZsaXNmcHp5dGJxeWRhdXNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI1MTI1NDMsImV4cCI6MjA3ODA4ODU0M30.hVcTso8RXwoU1kapvxNU6J9y6LONAtx6XJ7hKVjompQ
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
+
+To get these values:
+1. Go to your Supabase dashboard: https://supabase.com/dashboard
+2. Select your project
+3. Go to Settings > API
+4. Copy the "Project URL" and "anon public" key
 
 ### 2. Run Database Schema
 1. Go to your Supabase dashboard: https://supabase.com/dashboard
-2. Select your project (exzflisfpzytbqydausf)
+2. Select your project
 3. Navigate to SQL Editor
 4. Copy and paste the contents of `client/supabase/schema.sql`
 5. Click Run to execute the schema (rerun whenever this file changes so Supabase picks up helpers like `get_visible_events`)
