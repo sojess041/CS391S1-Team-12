@@ -20,16 +20,23 @@ Spark!Bytes connects hungry students with leftover event food in real time. Brow
 	```
 3. Create a `.env.local` file in the `client` directory with the following:
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
+	```env
+	NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+	NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+	```
 
-To get these values:
-  1. Go to your Supabase dashboard: https://supabase.com/dashboard
-  2. Select your project
-  3. Go to Settings > API
-  4. Copy the "Project URL" and "anon public" key
+	To get these values:
+	  1. Go to your Supabase dashboard: https://supabase.com/dashboard
+ 	 2. Select your project
+ 	 3. Go to Settings > API
+ 	 4. Copy the "Project URL" and "anon public" key
+
+	Database Schema Setup:
+
+	1. Go to your Supabase project dashboard: https://supabase.com/dashboard
+	2. Navigate to the SQL Editor
+	3. Copy and paste the contents of `schema.sql`
+	4. Run the SQL script to create all tables, indexes, and RLS policies
 
 4. **Run the development server:**
 	```bash
