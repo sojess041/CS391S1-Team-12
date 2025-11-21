@@ -1,5 +1,5 @@
 # Spark!Bytes
-Spark!Bytes is an site made by BU students to help reduce food waste and feed the BU community.
+Spark!Bytes is a site made by BU students to help reduce food waste and feed the BU community.
 Spark!Bytes connects hungry students with leftover event food in real time. Browse upcoming food events across campus, claim portions before they’re gone, or post your own event to share leftovers. Whether it’s post-hackathon pizza or extra bagels from a meeting, Spark!Bytes makes sure good food never goes to waste. 
 
 ## Features
@@ -39,4 +39,3 @@ To get these values:
 
 ## Database Setup
 See `DATABASE_SETUP.md` and `client/supabase/schema.sql` for details on the database schema and setup instructions.
-
