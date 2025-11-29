@@ -5,19 +5,42 @@ import Link from "next/link";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
 import { FiEye, FiEyeOff } from "react-icons/fi";
+import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: "", password: "", remember: false });
   const [showPwd, setShowPwd] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, type, checked, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log("Login submitted", form);
+    setLoading(true);
+
+    const { email, password } = form;
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setLoading(false);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Logged in successfully!");
+    window.location.href = "/dashboard"; // redirect after login
+  };
+
+  const signInWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({ provider: "google" });
+  };
+
+  const signInWithGithub = async () => {
+    await supabase.auth.signInWithOAuth({ provider: "github" });
   };
 
   return (
@@ -26,6 +49,7 @@ export default function LoginPage() {
         Log In to <span className="text-red-600">Spark</span>!Bytes
       </h1>
       <p className="italic text-center mt-2">Please log in to your account to reserve food and post events.</p>
+
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
         <div className="w-full">
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -64,7 +88,6 @@ export default function LoginPage() {
               type="button"
               onClick={() => setShowPwd((s) => !s)}
               className="absolute inset-y-0 right-2 my-auto p-1 text-gray-600"
-              aria-label={showPwd ? "Hide password" : "Show password"}
             >
               {showPwd ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
             </button>
@@ -89,9 +112,10 @@ export default function LoginPage() {
 
         <button
           type="submit"
+          disabled={loading}
           className="mt-2 w-full rounded-lg bg-red-600 text-white font-semibold py-2 shadow-sm hover:shadow-md transition-shadow"
         >
-          Sign in
+          {loading ? "Signing in..." : "Sign in"}
         </button>
 
         <div className="flex items-center w-full">
@@ -103,6 +127,7 @@ export default function LoginPage() {
         <div className="grid grid-cols-2 gap-3 mt-2">
           <button
             type="button"
+            onClick={signInWithGoogle}
             className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
           >
             <FcGoogle className="h-5 w-5" aria-hidden />
@@ -110,6 +135,7 @@ export default function LoginPage() {
           </button>
           <button
             type="button"
+            onClick={signInWithGithub}
             className="flex items-center justify-center gap-2 rounded-lg bg-black px-3 py-2 text-sm font-medium text-white hover:bg-gray-900 cursor-pointer"
           >
             <FaGithub className="h-5 w-5" aria-hidden />
