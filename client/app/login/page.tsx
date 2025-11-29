@@ -32,7 +32,7 @@ export default function LoginPage() {
     }
 
     alert("Logged in successfully!");
-    window.location.href = "/dashboard"; // redirect after login
+    window.location.href = "/"; // redirect after login
   };
 
   const signInWithGoogle = async () => {
