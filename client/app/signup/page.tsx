@@ -2,12 +2,16 @@
 
 import { useState, ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FcGoogle } from "react-icons/fc";
 import { FaGithub } from "react-icons/fa";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { DIETARY_RESTRICTIONS } from "@/lib/constants";
+import { supabase } from "@/lib/supabase";
+/* Implemented signup logic to the same page as UI, but I can create a separate actions page for server actions if necessary */
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -35,17 +39,52 @@ export default function SignUpPage() {
     }
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Check for BU email
+    if (!form.email.endsWith("@bu.edu")) {
+      alert("Please use your BU email address ending with @bu.edu.");
+      return;
+    }
+
     if (form.password !== form.confirm) {
       alert("Passwords do not match");
       return;
     }
+
     if (!form.role) {
       alert("Please select an account type");
       return;
     }
-    console.log("Sign up submitted", form);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: {
+            full_name: form.name,
+            role: form.role,
+            food_restrictions: form.foodRestrictions,
+          },
+        },
+      });
+
+      if (error) {
+        alert("Error creating account: " + error.message);
+        console.error(error);
+        return;
+      }
+
+      alert("Account created! Please check your email to confirm your account.");
+      console.log("Supabase signUp data:", data);
+
+      router.push("/login");
+    } catch (err) {
+      console.error(err);
+      alert("An unexpected error occurred. Please try again.");
+    }
   };
 
   return (
@@ -58,6 +97,7 @@ export default function SignUpPage() {
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+        {/* Name */}
         <div className="w-full">
           <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
             Full Name <span className="text-red-600">*</span>
@@ -74,6 +114,7 @@ export default function SignUpPage() {
           />
         </div>
 
+        {/* Email */}
         <div className="w-full">
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
             BU Email Address <span className="text-red-600">*</span>
@@ -91,6 +132,7 @@ export default function SignUpPage() {
           />
         </div>
 
+        {/* Password */}
         <div className="w-full">
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
             Password <span className="text-red-600">*</span>
@@ -118,6 +160,7 @@ export default function SignUpPage() {
           </div>
         </div>
 
+        {/* Confirm Password */}
         <div className="w-full">
           <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-1">
             Confirm Password <span className="text-red-600">*</span>
@@ -145,6 +188,7 @@ export default function SignUpPage() {
           </div>
         </div>
 
+        {/* Role */}
         <fieldset className="w-full">
           <legend className="block text-sm font-semibold text-gray-800 mb-2">
             Account Type<span className="text-red-600">*</span>
@@ -175,6 +219,7 @@ export default function SignUpPage() {
           </div>
         </fieldset>
 
+        {/* Dietary Restrictions */}
         <fieldset className="w-full">
           <legend className="block text-sm font-semibold text-gray-800 mb-2">
             Dietary Restrictions <span className="text-sm font-normal text-gray-600">(Optional - Select all that apply)</span>
@@ -199,6 +244,7 @@ export default function SignUpPage() {
           </div>
         </fieldset>
 
+        {/* Submit Button */}
         <button
           type="submit"
           className="mt-2 w-full rounded-lg bg-red-600 text-white font-semibold py-2 shadow-sm hover:shadow-md transition-shadow"
@@ -206,6 +252,7 @@ export default function SignUpPage() {
           Sign Up
         </button>
 
+        {/* OAuth Buttons */}
         <div className="flex items-center w-full mt-4">
           <hr className="flex-grow border-gray-300" />
           <span className="mx-4 text-sm text-gray-600">Or sign up with</span>
