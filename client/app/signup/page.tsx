@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FiEye, FiEyeOff } from "react-icons/fi";
@@ -18,6 +18,7 @@ export default function SignUpPage() {
     role: "",
     foodRestrictions: [] as string[],
   });
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -75,8 +76,27 @@ export default function SignUpPage() {
         return;
       }
 
-      alert("Account created! Please check your email to confirm your account.");
-      console.log("Supabase signUp data:", data);
+      const user = data.user;
+      if (user?.id && user.email) {
+        const resp = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: user.id,
+            email: user.email,
+            role: form.role,
+            full_name: form.name,
+            food_restrictions: form.foodRestrictions,
+          }),
+        });
+
+        if (!resp.ok) {
+          const body = await resp.json().catch(() => ({}));
+          const msg = body?.error || "Failed to save profile";
+          alert(msg);
+          return;
+        }
+      }
 
       router.push("/login");
     } catch (err) {
@@ -85,7 +105,24 @@ export default function SignUpPage() {
     }
   };
 
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      const isValid = session?.user && (!session.expires_at || session.expires_at * 1000 > Date.now());
+
+      if (isValid) {
+        router.replace("/");
+      } else {
+        setCheckingAuth(false);
+      }
+    };
+
+    checkSession();
+  }, [router]);
+
   return (
+    checkingAuth ? null : (
     <div className="w-full max-w-3xl border border-gray-200 rounded-xl shadow-md p-10 sm:p-16 mx-auto mt-12">
       <h1 className="text-3xl font-semibold text-center">
         Sign Up for Spark<span className="text-red-600">!Bytes</span>
@@ -259,5 +296,6 @@ export default function SignUpPage() {
         </p>
       </form>
     </div>
+    )
   );
 }

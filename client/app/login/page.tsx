@@ -1,16 +1,17 @@
 "use client";
 
-import { useState, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
-import { FcGoogle } from "react-icons/fc";
-import { FaGithub } from "react-icons/fa";
+import { useRouter } from "next/navigation";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { supabase } from "@/lib/supabase";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [form, setForm] = useState({ email: "", password: "", remember: false });
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, type, checked, value } = e.target;
@@ -31,19 +32,27 @@ export default function LoginPage() {
       return;
     }
 
-    alert("Logged in successfully!");
-    window.location.href = "/"; // redirect after login
+    router.replace("/profile");
   };
 
-  const signInWithGoogle = async () => {
-    await supabase.auth.signInWithOAuth({ provider: "google" });
-  };
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      const isValid = session?.user && (!session.expires_at || session.expires_at * 1000 > Date.now());
 
-  const signInWithGithub = async () => {
-    await supabase.auth.signInWithOAuth({ provider: "github" });
-  };
+      if (isValid) {
+        router.replace("/profile");
+      } else {
+        setCheckingAuth(false);
+      }
+    };
+
+    checkSession();
+  }, [router]);
 
   return (
+    checkingAuth ? null : (
     <div className="w-full max-w-3xl border border-gray-200 rounded-xl shadow-md p-10 sm:p-16 mx-auto mt-12">
       <h1 className="text-2xl font-semibold text-center">
         Log In to <span className="text-red-600">Spark</span>!Bytes
@@ -126,5 +135,6 @@ export default function LoginPage() {
         </p>
       </form>
     </div>
+    )
   );
 }
