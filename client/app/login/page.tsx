@@ -118,33 +118,8 @@ export default function LoginPage() {
           {loading ? "Signing in..." : "Sign in"}
         </button>
 
-        <div className="flex items-center w-full">
-          <hr className="flex-grow border-gray-300" />
-          <span className="mx-4 text-sm text-gray-600">Or log in with</span>
-          <hr className="flex-grow border-gray-300" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mt-2">
-          <button
-            type="button"
-            onClick={signInWithGoogle}
-            className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
-          >
-            <FcGoogle className="h-5 w-5" aria-hidden />
-            Google
-          </button>
-          <button
-            type="button"
-            onClick={signInWithGithub}
-            className="flex items-center justify-center gap-2 rounded-lg bg-black px-3 py-2 text-sm font-medium text-white hover:bg-gray-900 cursor-pointer"
-          >
-            <FaGithub className="h-5 w-5" aria-hidden />
-            GitHub
-          </button>
-        </div>
-
         <p className="text-center mt-5 text-sm text-gray-700">
-          Don't have an account?
+          Don&#39;t have an account?{" "}
           <Link href="/signup" className="font-medium text-red-600 hover:text-red-700 underline underline-offset-4">
             Sign up
           </Link>

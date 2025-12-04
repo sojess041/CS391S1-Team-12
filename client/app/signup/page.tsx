@@ -3,8 +3,6 @@
 import { useState, ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FcGoogle } from "react-icons/fc";
-import { FaGithub } from "react-icons/fa";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { DIETARY_RESTRICTIONS } from "@/lib/constants";
 import { supabase } from "@/lib/supabase";
@@ -222,10 +220,11 @@ export default function SignUpPage() {
         {/* Dietary Restrictions */}
         <fieldset className="w-full">
           <legend className="block text-sm font-semibold text-gray-800 mb-2">
-            Dietary Restrictions <span className="text-sm font-normal text-gray-600">(Optional - Select all that apply)</span>
+            Dietary Restrictions{" "}
+            <span className="text-sm font-normal text-gray-600">(Optional - Select all that apply)</span>
           </legend>
           <p className="text-xs text-gray-600 mb-3">
-            We'll filter events to show only those that match your dietary needs. Leave blank to see all events.
+            We&#39;ll filter events to show only those that match your dietary needs. Leave blank to see all events.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {DIETARY_RESTRICTIONS.map((option) => (
@@ -251,30 +250,6 @@ export default function SignUpPage() {
         >
           Sign Up
         </button>
-
-        {/* OAuth Buttons */}
-        <div className="flex items-center w-full mt-4">
-          <hr className="flex-grow border-gray-300" />
-          <span className="mx-4 text-sm text-gray-600">Or sign up with</span>
-          <hr className="flex-grow border-gray-300" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mt-2">
-          <button
-            type="button"
-            className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
-          >
-            <FcGoogle className="h-5 w-5" aria-hidden />
-            Google
-          </button>
-          <button
-            type="button"
-            className="flex items-center justify-center gap-2 rounded-lg bg-black px-3 py-2 text-sm font-medium text-white hover:bg-gray-900 cursor-pointer"
-          >
-            <FaGithub className="h-5 w-5" aria-hidden />
-            GitHub
-          </button>
-        </div>
 
         <p className="text-center mt-6 text-sm text-gray-700">
           Already have an account?{" "}
