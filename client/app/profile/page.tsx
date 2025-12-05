@@ -1,6 +1,7 @@
 "use client";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createSupabaseClient } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 
@@ -39,6 +40,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [editingPreferences, setEditingPreferences] = useState(false);
   const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
+  const router = useRouter();
 
   const dietaryOptions = [
     "Vegetarian",
@@ -71,7 +73,6 @@ export default function ProfilePage() {
 
       logger.debug("Loading profile data", { userId: user.id });
 
-      // Load user profile
       const { data: profileData, error: profileError } = await supabase
         .from("users")
         .select("full_name, email, food_restrictions")
@@ -89,7 +90,6 @@ export default function ProfilePage() {
         });
       }
 
-      // Load user reservations
       const { data: reservationsData, error: reservationsError } = await supabase
         .from("reservations")
         .select("*")
@@ -101,7 +101,6 @@ export default function ProfilePage() {
         logger.error("Failed to load reservations", reservationsError, { userId: user.id });
         setReservations([]);
       } else if (reservationsData && reservationsData.length > 0) {
-        // Fetch event details for each reservation
         const eventIds = reservationsData.map((r: Reservation) => r.event_id);
         const { data: eventsData, error: eventsError } = await supabase
           .from("events")
@@ -112,7 +111,6 @@ export default function ProfilePage() {
           logger.error("Failed to load event details", eventsError, { userId: user.id });
           setReservations(reservationsData.map((r: Reservation) => ({ ...r, event: null })));
         } else {
-          // Map events to reservations
           const eventsMap = new Map(eventsData?.map((e: Event) => [e.id, e]) || []);
           const reservationsWithEvents = reservationsData.map((r: Reservation) => ({
             ...r,
@@ -236,6 +234,26 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleLogout() {
+    logger.debug("User attempting to logout");
+    
+    try {
+      const supabase = createSupabaseClient();
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        logger.error("Logout failed", error);
+        alert("Failed to log out. Please try again.");
+      } else {
+        logger.info("User logged out successfully");
+        router.push("/login");
+      }
+    } catch (err) {
+      logger.error("Unexpected error during logout", err as Error);
+      alert("An error occurred. Please try again.");
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50">
@@ -264,10 +282,20 @@ export default function ProfilePage() {
       </div>
 
       <div className="mx-auto w-11/12 max-w-5xl py-10">
-        {/* Profile Header */}
+        {/* Profile Header with Logout */}
         <div className="mb-8 rounded-3xl border border-gray-200 bg-white/90 p-8 shadow-sm">
-          <h1 className="text-3xl font-semibold text-gray-900">{profile.full_name}</h1>
-          <p className="mt-1 text-gray-600">{profile.email}</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-semibold text-gray-900">{profile.full_name}</h1>
+              <p className="mt-1 text-gray-600">{profile.email}</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="rounded-xl bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300 transition"
+            >
+              Log Out
+            </button>
+          </div>
         </div>
 
         {/* Food Preferences Section */}
