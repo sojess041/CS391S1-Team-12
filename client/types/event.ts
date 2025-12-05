@@ -1,10 +1,16 @@
 export type EventCardProps = {
+  id?: string;
   eventName: string;
-  organizerName: string;
-  location: string;
+  eventLocation: string;
+  roomNumber?: string | null;
+  eventDate: string;
+  startTime: string;
+  endTime: string;
   foodType: string;
-  timeframe: string;
   quantity: number;
-  image?: string;
-  tags?: string[]; 
+  quantityRemaining: number;
+  eventDescription?: string | null;
+  eventTags?: string[];
+  eventImage?: string | null;
+  organizerName?: string;
 };

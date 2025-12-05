@@ -6,8 +6,10 @@ import { usePathname } from "next/navigation";
 
 export default function Navbar() {
   const pathname = usePathname();
+  const accountPaths = ["/login", "/signup", "/profile"];
   const links = [
     { href: "/", label: "Explore" },
+    { href: "/events", label: "Events" },
     { href: "/post", label: "Post" },
     { href: "/about", label: "About" },
     { href: "/login", label: <FaCircleUser /> },
@@ -21,7 +23,9 @@ export default function Navbar() {
         </Link>
         <ul className="flex text-xl items-center gap-20 font-medium tracking-tight lowercase">
           {links.map((link) => {
-            const active = pathname === link.href;
+            const active =
+              pathname === link.href ||
+              (link.href === "/login" && accountPaths.includes(pathname));
             return (
               <li key={link.href}>
                 <Link href={link.href} className={active ? "text-red-600 " : "text-black"}>
