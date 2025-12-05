@@ -12,6 +12,7 @@ export default function Navbar() {
     { href: "/events", label: "Events" },
     { href: "/post", label: "Post" },
     { href: "/about", label: "About" },
+    { href: "/profile", label: "Profile" },  // profile page 
     { href: "/login", label: <FaCircleUser /> },
   ];
 

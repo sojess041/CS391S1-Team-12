@@ -1,315 +1,421 @@
 "use client";
+import Image from "next/image";
+import { useState, useEffect } from "react";
+import { createSupabaseClient } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { FiBell, FiCalendar, FiLogOut } from "react-icons/fi";
-
-type ReservationEventDetails = {
-  id: string;
-  name: string;
-  location: string;
-  date: string;
-  startTime: string;
-};
-
-type ReservationActivity = {
-  id: string;
-  quantityReserved: number;
-  status: string;
-  reservedAt: string;
-  event: ReservationEventDetails;
-};
-
-type ProfileDetails = {
-  fullName: string;
-  major: string;
-  graduationYear: string;
-  preferredCampus: string;
-};
-
-type UserMetadata = {
-  full_name?: string;
-  major?: string;
-  graduation_year?: string;
-  preferred_campus?: string;
-  role?: string;
-};
-
-type ReservationRow = {
+interface Reservation {
   id: string;
   event_id: string;
   quantity_reserved: number;
   status: string;
   reserved_at: string;
-  event: {
-    id: string;
-    event_name: string;
-    event_location: string;
-    event_date: string;
-    start_time: string;
-  } | null;
-};
+}
 
-const formatEventDateLabel = (dateString?: string, timeString?: string) => {
-  if (!dateString) return "Date TBA";
-  const date = new Date(`${dateString}T${timeString ?? "00:00:00"}`);
-  const datePart = Number.isNaN(date.getTime())
-    ? dateString
-    : new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric" }).format(date);
-  if (!timeString) return datePart;
-  const time = new Date(`1970-01-01T${timeString}`);
-  const timePart = Number.isNaN(time.getTime())
-    ? timeString
-    : new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" }).format(time);
-  return `${datePart} · ${timePart}`;
-};
+interface Event {
+  id: string;
+  event_name: string;
+  event_location: string;
+  room_number: string;
+  event_date: string;
+  food_type?: string;
+  quantity: number;
+  event_image?: string;
+}
 
-const formatReservedAtLabel = (timestamp?: string) => {
-  if (!timestamp) return "";
-  const parsed = new Date(timestamp);
-  if (Number.isNaN(parsed.getTime())) return timestamp;
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(parsed);
-};
+interface ReservationWithEvent extends Reservation {
+  event: Event | null;
+}
 
-const statusBadgeClasses = (status: string) => {
-  const normalized = status.toLowerCase();
-  if (normalized === "confirmed") return "bg-emerald-50 text-emerald-700";
-  if (normalized === "cancelled") return "bg-gray-100 text-gray-600";
-  return "bg-amber-50 text-amber-700";
-};
+interface UserProfile {
+  full_name: string;
+  email: string;
+  food_restrictions: string[];
+}
 
 export default function ProfilePage() {
-  const router = useRouter();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [reservations, setReservations] = useState<ReservationWithEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [email, setEmail] = useState<string | null>(null);
-  const [role, setRole] = useState<string | null>(null);
-  const [profileDetails, setProfileDetails] = useState<ProfileDetails | null>(null);
-  const [reservations, setReservations] = useState<ReservationActivity[]>([]);
-  const [reservationsError, setReservationsError] = useState<string | null>(null);
+  const [editingPreferences, setEditingPreferences] = useState(false);
+  const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
+
+  const dietaryOptions = [
+    "Vegetarian",
+    "Vegan",
+    "Gluten-free",
+    "Halal",
+    "Kosher",
+    "Nut-free",
+    "Dairy-free",
+  ];
 
   useEffect(() => {
-    const load = async () => {
-      const { data: userData, error } = await supabase.auth.getUser();
-      if (error || !userData.user) {
-        router.replace("/login");
+    logger.debug("Profile page mounted");
+    loadProfileData();
+  }, []);
+
+  async function loadProfileData() {
+    const startTime = Date.now();
+    try {
+      const supabase = createSupabaseClient();
+      
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        logger.warn("User not authenticated on profile page", { error: userError?.message });
+        setLoading(false);
         return;
       }
 
-      const metadata = (userData.user.user_metadata ?? {}) as UserMetadata;
-      setEmail(userData.user.email ?? null);
-      setRole(metadata.role ?? userData.user.app_metadata?.role ?? null);
-      setReservationsError(null);
+      logger.debug("Loading profile data", { userId: user.id });
 
-      setProfileDetails({
-        fullName: metadata.full_name ?? userData.user.email?.split("@")[0] ?? "Community Member",
-        major: metadata.major ?? "Undeclared major",
-        graduationYear: metadata.graduation_year ?? "TBD",
-        preferredCampus: metadata.preferred_campus ?? "Main campus",
-      });
+      // Load user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from("users")
+        .select("full_name, email, food_restrictions")
+        .eq("id", user.id)
+        .single();
 
-      const userId = userData.user.id;
-      const { data: reservationRows, error: reservationsFetchError } = await supabase
-        .from("reservations")
-        .select(
-          `
-          id,
-          event_id,
-          quantity_reserved,
-          status,
-          reserved_at,
-          event:events (
-            id,
-            event_name,
-            event_location,
-            event_date,
-            start_time
-          )
-        `
-        )
-        .eq("user_id", userId)
-        .order("reserved_at", { ascending: false })
-        .limit(5);
-
-      if (reservationsFetchError) {
-        console.error("Unable to load reservations:", reservationsFetchError);
-        setReservationsError("Unable to load your reservations right now.");
-        setReservations([]);
+      if (profileError) {
+        logger.error("Failed to load user profile", profileError, { userId: user.id });
       } else {
-        const rows = (reservationRows ?? []) as ReservationRow[];
-        const mappedReservations = rows.map((reservation) => {
-          const event = reservation.event;
-          return {
-            id: reservation.id,
-            quantityReserved: reservation.quantity_reserved,
-            status: reservation.status,
-            reservedAt: reservation.reserved_at,
-            event: {
-              id: event?.id ?? reservation.event_id,
-              name: event?.event_name ?? "Campus event",
-              location: event?.event_location ?? "Location TBA",
-              date: event?.event_date ?? "Date TBA",
-              startTime: event?.start_time ?? "",
-            },
-          } satisfies ReservationActivity;
+        setProfile(profileData);
+        setSelectedPreferences(profileData.food_restrictions || []);
+        logger.info("Profile loaded", { 
+          userId: user.id,
+          hasPreferences: profileData.food_restrictions?.length > 0 
         });
-        setReservations(mappedReservations);
       }
 
+      // Load user reservations
+      const { data: reservationsData, error: reservationsError } = await supabase
+        .from("reservations")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("reserved_at", { ascending: false })
+        .limit(50);
+
+      if (reservationsError) {
+        logger.error("Failed to load reservations", reservationsError, { userId: user.id });
+        setReservations([]);
+      } else if (reservationsData && reservationsData.length > 0) {
+        // Fetch event details for each reservation
+        const eventIds = reservationsData.map((r: Reservation) => r.event_id);
+        const { data: eventsData, error: eventsError } = await supabase
+          .from("events")
+          .select("*")
+          .in("id", eventIds);
+
+        if (eventsError) {
+          logger.error("Failed to load event details", eventsError, { userId: user.id });
+          setReservations(reservationsData.map((r: Reservation) => ({ ...r, event: null })));
+        } else {
+          // Map events to reservations
+          const eventsMap = new Map(eventsData?.map((e: Event) => [e.id, e]) || []);
+          const reservationsWithEvents = reservationsData.map((r: Reservation) => ({
+            ...r,
+            event: eventsMap.get(r.event_id) || null
+          }));
+          setReservations(reservationsWithEvents);
+          
+          const duration = Date.now() - startTime;
+          logger.info("Profile data loaded successfully", { 
+            userId: user.id,
+            reservationsCount: reservationsData.length,
+            duration
+          });
+        }
+      } else {
+        setReservations([]);
+        logger.info("No reservations found", { userId: user.id });
+      }
+
+    } catch (error) {
+      logger.error("Unexpected error loading profile", error as Error);
+    } finally {
       setLoading(false);
-    };
-
-    load();
-  }, [router]);
-
-  const handleSignOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    router.replace("/login");
-  }, [router]);
-
-  const initials = useMemo(() => {
-    if (!profileDetails && !email) return "U";
-    const source = profileDetails?.fullName ?? email ?? "User";
-    const pieces = source
-      .split(" ")
-      .filter((part) => part.length > 0)
-      .slice(0, 2);
-    if (pieces.length === 0) return source.slice(0, 2).toUpperCase();
-    return pieces
-      .map((part) => part.charAt(0).toUpperCase())
-      .join("")
-      .slice(0, 2);
-  }, [profileDetails, email]);
-
-  if (loading || !profileDetails) {
-    return null;
+    }
   }
 
-  const quickActions = [
-    {
-      title: "Plan an event",
-      description: "Share leftover catering or host a community drop.",
-      action: () => router.push("/post"),
-      icon: <FiCalendar className="h-5 w-5 text-red-500" />,
-    },
-    {
-      title: "Notification settings",
-      description: "Choose which food alerts hit your inbox.",
-      action: () => router.push("/profile?tab=alerts"),
-      icon: <FiBell className="h-5 w-5 text-red-500" />,
-    },
-  ];
+  async function updatePreferences() {
+    const startTime = Date.now();
+    logger.debug("Updating food preferences", { 
+      oldCount: profile?.food_restrictions?.length || 0,
+      newCount: selectedPreferences.length,
+      preferences: selectedPreferences
+    });
+
+    try {
+      const supabase = createSupabaseClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        logger.warn("Cannot update preferences - user not authenticated");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("users")
+        .update({ food_restrictions: selectedPreferences })
+        .eq("id", user.id);
+
+      if (error) {
+        logger.error("Failed to update preferences", error, { 
+          userId: user.id,
+          preferences: selectedPreferences
+        });
+        alert("Failed to update preferences. Please try again.");
+      } else {
+        setProfile(prev => prev ? { ...prev, food_restrictions: selectedPreferences } : null);
+        setEditingPreferences(false);
+        const duration = Date.now() - startTime;
+        logger.info("Preferences updated successfully", { 
+          userId: user.id,
+          preferences: selectedPreferences,
+          duration
+        });
+      }
+    } catch (error) {
+      logger.error("Unexpected error updating preferences", error as Error);
+      alert("An error occurred. Please try again.");
+    }
+  }
+
+  function togglePreference(pref: string) {
+    setSelectedPreferences(prev =>
+      prev.includes(pref)
+        ? prev.filter(p => p !== pref)
+        : [...prev, pref]
+    );
+    logger.debug("Preference toggled", { preference: pref });
+  }
+
+  async function cancelReservation(reservationId: string, eventName: string) {
+    logger.debug("Canceling reservation", { reservationId, eventName });
+
+    if (!confirm(`Cancel your reservation for "${eventName}"?`)) {
+      logger.debug("Reservation cancellation aborted by user");
+      return;
+    }
+
+    try {
+      const supabase = createSupabaseClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        logger.warn("Cannot cancel reservation - user not authenticated");
+        return;
+      }
+
+      const { error } = await supabase
+        .from("reservations")
+        .delete()
+        .eq("id", reservationId)
+        .eq("user_id", user.id);
+
+      if (error) {
+        logger.error("Failed to cancel reservation", error, { 
+          userId: user.id,
+          reservationId,
+          eventName
+        });
+        alert("Failed to cancel reservation. Please try again.");
+      } else {
+        setReservations(prev => prev.filter(r => r.id !== reservationId));
+        logger.info("Reservation cancelled", { 
+          userId: user.id,
+          reservationId,
+          eventName
+        });
+      }
+    } catch (error) {
+      logger.error("Unexpected error canceling reservation", error as Error);
+      alert("An error occurred. Please try again.");
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-red-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading your profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-600">Please log in to view your profile.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-5xl space-y-8">
-        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center">
-            <div className="flex h-28 w-28 flex-shrink-0 items-center justify-center rounded-3xl bg-gray-100 text-3xl font-semibold uppercase text-gray-900">
-              {initials}
-            </div>
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <p className="text-xs uppercase tracking-[0.4em] text-gray-500">{role ?? "Community Member"}</p>
-                <h1 className="text-3xl font-semibold text-gray-900">{profileDetails.fullName}</h1>
-              </div>
-              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                <span>{email}</span>
-                <span className="flex items-center gap-2">
-                  <FiCalendar className="h-4 w-4 text-red-600" />
-                  {profileDetails.graduationYear}
-                </span>
-                <span>{profileDetails.major}</span>
-              </div>
-            </div>
-            <div className="flex flex-1 items-center justify-end md:flex-col md:items-end md:justify-center">
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-500"
-              >
-                <FiLogOut className="mr-2 h-4 w-4" />
-                Sign out
-              </button>
-            </div>
-          </div>
-        </section>
-        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900">Quick actions</h2>
-            <p className="text-sm text-gray-500">Keep track of food drops.</p>
-          </div>
-          <div className="mt-4 space-y-4">
-            {quickActions.map((action) => (
-              <button
-                key={action.title}
-                type="button"
-                onClick={action.action}
-                className="flex w-full items-start gap-4 rounded-2xl border border-gray-200 p-4 text-left transition hover:border-red-300 hover:bg-red-50/70"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-600">{action.icon}</span>
-                <span>
-                  <p className="text-base font-semibold text-gray-900">{action.title}</p>
-                  <p className="text-sm text-gray-600">{action.description}</p>
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+    <div className="relative min-h-screen bg-gray-50">
+      <div className="pointer-events-none absolute bottom-0 right-[80px] hidden md:block" aria-hidden="true">
+        <Image src="/terrier_4.png" alt="Boston terriers" width={200} height={200} priority />
+      </div>
 
-        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Your reservations</h2>
-              <p className="text-sm text-gray-500">Based on your most recent holds.</p>
-            </div>
-            {reservations.length > 0 && (
-              <p className="text-xs uppercase tracking-wide text-gray-400">
-                Updated {formatReservedAtLabel(reservations[0].reservedAt)}
-              </p>
-            )}
+      <div className="mx-auto w-11/12 max-w-5xl py-10">
+        {/* Profile Header */}
+        <div className="mb-8 rounded-3xl border border-gray-200 bg-white/90 p-8 shadow-sm">
+          <h1 className="text-3xl font-semibold text-gray-900">{profile.full_name}</h1>
+          <p className="mt-1 text-gray-600">{profile.email}</p>
+        </div>
+
+        {/* Food Preferences Section */}
+        <div className="mb-8 rounded-3xl border border-gray-200 bg-white/90 p-8 shadow-sm">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-2xl font-semibold text-gray-900">Food Preferences</h2>
+            <button
+              onClick={() => {
+                if (editingPreferences) {
+                  updatePreferences();
+                } else {
+                  setEditingPreferences(true);
+                  logger.debug("Entered preference editing mode");
+                }
+              }}
+              className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 transition"
+            >
+              {editingPreferences ? "Save" : "Edit"}
+            </button>
           </div>
-          <div className="mt-4 space-y-4">
-            {reservationsError && <p className="text-sm text-red-600">{reservationsError}</p>}
-            {!reservationsError && reservations.length === 0 && (
-              <p className="text-sm text-gray-600">
-                You haven&apos;t reserved any events yet. RSVP to an event and your activity will appear here.
-              </p>
-            )}
-            {!reservationsError &&
-              reservations.map((reservation) => (
+
+          {editingPreferences ? (
+            <div className="space-y-2">
+              {dietaryOptions.map(option => (
+                <label
+                  key={option}
+                  className="flex items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-3 cursor-pointer hover:bg-gray-100 transition"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedPreferences.includes(option)}
+                    onChange={() => togglePreference(option)}
+                    className="h-5 w-5 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                  />
+                  <span className="text-gray-900">{option}</span>
+                </label>
+              ))}
+              <button
+                onClick={() => {
+                  setSelectedPreferences(profile.food_restrictions || []);
+                  setEditingPreferences(false);
+                  logger.debug("Preference editing cancelled");
+                }}
+                className="mt-3 text-sm text-gray-600 hover:text-gray-900"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {profile.food_restrictions && profile.food_restrictions.length > 0 ? (
+                profile.food_restrictions.map(pref => (
+                  <span
+                    key={pref}
+                    className="inline-flex items-center rounded-full bg-red-100 px-4 py-2 text-sm font-medium text-red-800"
+                  >
+                    {pref}
+                  </span>
+                ))
+              ) : (
+                <p className="text-gray-500">No preferences set. Click "Edit" to add some!</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Reservations Section */}
+        <div className="rounded-3xl border border-gray-200 bg-white/90 p-8 shadow-sm">
+          <h2 className="mb-6 text-2xl font-semibold text-gray-900">My Reservations</h2>
+
+          {reservations.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">You haven't reserved any events yet.</p>
+              <a
+                href="/events"
+                className="mt-4 inline-block text-red-600 hover:text-red-500 font-medium"
+              >
+                Explore events →
+              </a>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {reservations.map(reservation => (
                 <div
                   key={reservation.id}
-                  className="flex flex-col gap-3 rounded-2xl border border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col md:flex-row gap-4 rounded-2xl border border-gray-200 bg-gray-50 p-4 hover:shadow-md transition"
                 >
+                  {reservation.event?.event_image && (
+                    <div className="relative h-32 w-full md:w-32 flex-shrink-0 overflow-hidden rounded-xl">
+                      <Image
+                        src={reservation.event.event_image}
+                        alt={reservation.event.event_name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  )}
+
                   <div className="flex-1">
-                    <p className="text-base font-semibold text-gray-900">{reservation.event.name}</p>
-                    <p className="text-sm text-gray-600">
-                      {formatEventDateLabel(reservation.event.date, reservation.event.startTime)} · {reservation.event.location}
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {reservation.event?.event_name || "Event details unavailable"}
+                    </h3>
+                    {reservation.event && (
+                      <>
+                        <p className="mt-1 text-sm text-gray-600">
+                          {reservation.event.event_location} - {reservation.event.room_number}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {reservation.event.event_date}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Reserved: {reservation.quantity_reserved} servings
+                        </p>
+                        {reservation.event.food_type && (
+                          <span className="mt-2 inline-block rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800">
+                            {reservation.event.food_type}
+                          </span>
+                        )}
+                      </>
+                    )}
+                    <p className="mt-2 text-xs text-gray-500">
+                      Reserved on {new Date(reservation.reserved_at).toLocaleDateString()}
                     </p>
-                    <p className="mt-1 text-xs uppercase tracking-wide text-gray-500">
-                      Reserved {formatReservedAtLabel(reservation.reservedAt)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide ${statusBadgeClasses(
-                        reservation.status
-                      )}`}
-                    >
-                      {reservation.status}
+                    <span className={`mt-1 inline-block text-xs font-medium ${
+                      reservation.status === 'confirmed' ? 'text-green-600' :
+                      reservation.status === 'cancelled' ? 'text-red-600' :
+                      'text-gray-600'
+                    }`}>
+                      Status: {reservation.status}
                     </span>
-                    <span className="text-sm font-semibold text-gray-700">Qty {reservation.quantityReserved}</span>
                   </div>
+
+                  {reservation.status !== 'cancelled' && (
+                    <button
+                      onClick={() => cancelReservation(
+                        reservation.id, 
+                        reservation.event?.event_name || "this event"
+                      )}
+                      className="self-start rounded-xl bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200 transition"
+                    >
+                      Cancel
+                    </button>
+                  )}
                 </div>
               ))}
-          </div>
-        </section>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

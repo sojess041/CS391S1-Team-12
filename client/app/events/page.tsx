@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { EventCardProps } from "@/types/event";
 import { supabase } from "@/lib/supabase";
+import { logger } from "@/lib/logger";
 
 type ReserveEventResult = {
   reservation_id: string;
@@ -21,6 +22,8 @@ export default function EventsPage() {
   const router = useRouter();
 
   useEffect(() => {
+    logger.debug("Events page mounted");
+    
     type EventsQueryRow = {
       id: string;
       event_name: string;
@@ -41,61 +44,77 @@ export default function EventsPage() {
     };
 
     const fetchEvents = async () => {
+      const startTime = Date.now();
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from("events")
-        .select(
+      logger.debug("Fetching events from database");
+
+      try {
+        const { data, error: fetchError } = await supabase
+          .from("events")
+          .select(
+            `
+            id,
+            event_name,
+            event_location,
+            room_number,
+            event_date,
+            start_time,
+            end_time,
+            food_type,
+            quantity,
+            quantity_remaining,
+            event_description,
+            event_tags,
+            event_image,
+            organizer:users!events_organizer_id_fkey (
+              full_name
+            )
           `
-          id,
-          event_name,
-          event_location,
-          room_number,
-          event_date,
-          start_time,
-          end_time,
-          food_type,
-          quantity,
-          quantity_remaining,
-          event_description,
-          event_tags,
-          event_image,
-          organizer:users!events_organizer_id_fkey (
-            full_name
           )
-        `
-        )
-        .eq("is_active", true)
-        .gt("quantity_remaining", 0)
-        .order("event_date", { ascending: true });
+          .eq("is_active", true)
+          .gt("quantity_remaining", 0)
+          .order("event_date", { ascending: true });
 
-      if (fetchError) {
-        console.error("Unable to fetch events:", fetchError);
-        setError("Unable to load events right now. Please try again later.");
+        if (fetchError) {
+          logger.error("Failed to fetch events", fetchError);
+          setError("Unable to load events right now. Please try again later.");
+          setEvents([]);
+        } else {
+          const rows = ((data ?? []) as unknown) as EventsQueryRow[];
+                    const mappedEvents: EventCardProps[] = rows.map((event) => ({
+            id: event.id,
+            eventName: event.event_name,
+            eventLocation: event.event_location,
+            roomNumber: event.room_number ?? undefined,
+            eventDate: event.event_date,
+            startTime: event.start_time,
+            endTime: event.end_time,
+            foodType: event.food_type,
+            quantity: event.quantity,
+            quantityRemaining: event.quantity_remaining,
+            eventDescription: event.event_description ?? undefined,
+            eventTags: event.event_tags ?? undefined,
+            eventImage: event.event_image ?? undefined,
+            organizerName: event.organizer?.full_name ?? undefined,
+          }));
+          
+          const duration = Date.now() - startTime;
+          logger.info("Events loaded successfully", { 
+            count: mappedEvents.length,
+            duration
+          });
+          
+          setEvents(mappedEvents);
+        }
+      } catch (err) {
+        logger.error("Unexpected error fetching events", err as Error);
+        setError("An unexpected error occurred. Please try again.");
         setEvents([]);
-      } else {
-        const rows = (data ?? []) as EventsQueryRow[];
-        const mappedEvents: EventCardProps[] = rows.map((event) => ({
-          id: event.id,
-          eventName: event.event_name,
-          eventLocation: event.event_location,
-          roomNumber: event.room_number ?? undefined,
-          eventDate: event.event_date,
-          startTime: event.start_time,
-          endTime: event.end_time,
-          foodType: event.food_type,
-          quantity: event.quantity,
-          quantityRemaining: event.quantity_remaining,
-          eventDescription: event.event_description ?? undefined,
-          eventTags: event.event_tags ?? undefined,
-          eventImage: event.event_image ?? undefined,
-          organizerName: event.organizer?.full_name ?? undefined,
-        }));
-        setEvents(mappedEvents);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     fetchEvents();
@@ -142,27 +161,50 @@ export default function EventsPage() {
 
   const handleReserve = useCallback(
     async (event: EventCardProps) => {
-      if (!event.id) return;
+      if (!event.id) {
+        logger.warn("Attempted to reserve event without ID");
+        return;
+      }
+      
       setFeedback(null);
       setReservingId(event.id);
+      
+      logger.debug("Attempting to reserve event", { 
+        eventId: event.id, 
+        eventName: event.eventName 
+      });
+
       try {
         const { data: userData, error: userError } = await supabase.auth.getUser();
+        
         if (userError || !userData.user) {
+          logger.warn("User not authenticated on reserve attempt");
           router.push("/login");
           setFeedback({ type: "error", message: "Please sign in to reserve an event." });
           return;
         }
 
-        const { data, error: reserveError } = await supabase.rpc<ReserveEventResult>("reserve_event", {
-          event_id_input: event.id,
+        logger.debug("Calling reserve_event RPC", { 
+          userId: userData.user.id,
+          eventId: event.id 
+        });
+
+        const { data, error: reserveError } = await supabase.rpc("reserve_event", {
+                    event_id_input: event.id,
           servings: 1,
         });
 
         if (reserveError) {
+          logger.error("Reservation failed", reserveError, { 
+            userId: userData.user.id,
+            eventId: event.id,
+            eventName: event.eventName
+          });
           setFeedback({ type: "error", message: reserveError.message ?? "Unable to reserve this event." });
         } else {
           const updatedQuantity =
             Array.isArray(data) && data.length > 0 ? data[0]?.new_quantity_remaining : undefined;
+          
           if (typeof updatedQuantity === "number") {
             setEvents((prev) =>
               prev.map((item) =>
@@ -170,9 +212,21 @@ export default function EventsPage() {
               )
             );
           }
+          
+          logger.info("Event reserved successfully", { 
+            userId: userData.user.id,
+            eventId: event.id,
+            eventName: event.eventName,
+            newQuantity: updatedQuantity
+          });
+          
           setFeedback({ type: "success", message: `Reserved a serving at ${event.eventName}.` });
         }
       } catch (err) {
+        logger.error("Unexpected error during reservation", err as Error, {
+          eventId: event.id,
+          eventName: event.eventName
+        });
         setFeedback({
           type: "error",
           message: err instanceof Error ? err.message : "Unable to reserve this event.",
