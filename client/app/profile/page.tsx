@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseClient } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { FaUtensils, FaClipboardList, FaUser } from "react-icons/fa6";
+import { FiAlertTriangle, FiX } from "react-icons/fi";
 
 interface Reservation {
   id: string;
@@ -37,6 +39,8 @@ interface UserProfile {
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [reservations, setReservations] = useState<ReservationWithEvent[]>([]);
+  const [pendingCancellation, setPendingCancellation] = useState<{ id: string; eventName: string } | null>(null);
+  const [processingCancellation, setProcessingCancellation] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editingPreferences, setEditingPreferences] = useState(false);
   const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
@@ -192,12 +196,6 @@ export default function ProfilePage() {
 
   async function cancelReservation(reservationId: string, eventName: string) {
     logger.debug("Canceling reservation", { reservationId, eventName });
-
-    if (!confirm(`Cancel your reservation for "${eventName}"?`)) {
-      logger.debug("Reservation cancellation aborted by user");
-      return;
-    }
-
     try {
       const supabase = createSupabaseClient();
       const { data: { user } } = await supabase.auth.getUser();
@@ -233,6 +231,19 @@ export default function ProfilePage() {
       alert("An error occurred. Please try again.");
     }
   }
+
+  const handleDismissCancellation = () => {
+    if (processingCancellation) return;
+    setPendingCancellation(null);
+  };
+
+  const handleConfirmCancellation = async () => {
+    if (!pendingCancellation) return;
+    setProcessingCancellation(true);
+    await cancelReservation(pendingCancellation.id, pendingCancellation.eventName);
+    setProcessingCancellation(false);
+    setPendingCancellation(null);
+  };
 
   async function handleLogout() {
     logger.debug("User attempting to logout");
@@ -276,18 +287,23 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-gray-50">
-      <div className="pointer-events-none absolute bottom-0 right-[80px] hidden md:block" aria-hidden="true">
-        <Image src="/terrier_4.png" alt="Boston terriers" width={200} height={200} priority />
-      </div>
+    <>
+      <div className="relative min-h-screen bg-gray-50">
+        <div className="pointer-events-none absolute bottom-0 right-[80px] hidden md:block" aria-hidden="true">
+          <Image src="/terrier_4.png" alt="Boston terriers" width={200} height={200} priority />
+        </div>
 
-      <div className="mx-auto w-11/12 max-w-5xl py-10">
-        {/* Profile Header with Logout */}
+        <div className="mx-auto w-11/12 max-w-5xl py-10">
         <div className="mb-8 rounded-3xl border border-gray-200 bg-white/90 p-8 shadow-sm">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-semibold text-gray-900">{profile.full_name}</h1>
-              <p className="mt-1 text-gray-600">{profile.email}</p>
+            <div className="flex items-center gap-3">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                <FaUser className="h-6 w-6" />
+              </span>
+              <div>
+                <h1 className="text-3xl font-semibold text-gray-900">{profile.full_name}</h1>
+                <p className="mt-1 text-gray-600">{profile.email}</p>
+              </div>
             </div>
             <button
               onClick={handleLogout}
@@ -298,10 +314,17 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Food Preferences Section */}
         <div className="mb-8 rounded-3xl border border-gray-200 bg-white/90 p-8 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-gray-900">Food Preferences</h2>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                <FaUtensils className="h-6 w-6" />
+              </span>
+              <div>
+                <h2 className="text-2xl font-semibold text-gray-900">Food Preferences</h2>
+                <p className="text-sm text-gray-600">Let us know your dietary restrictions so events can match your needs.</p>
+              </div>
+            </div>
             <button
               onClick={() => {
                 if (editingPreferences) {
@@ -362,9 +385,16 @@ export default function ProfilePage() {
           )}
         </div>
 
-        {/* Reservations Section */}
         <div className="rounded-3xl border border-gray-200 bg-white/90 p-8 shadow-sm">
-          <h2 className="mb-6 text-2xl font-semibold text-gray-900">My Reservations</h2>
+          <div className="mb-6 flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+              <FaClipboardList className="h-6 w-6" />
+            </span>
+            <div>
+              <h2 className="text-2xl font-semibold text-gray-900">My Reservations</h2>
+              <p className="text-sm text-gray-600">Keep track of your upcoming food pickups.</p>
+            </div>
+          </div>
 
           {reservations.length === 0 ? (
             <div className="text-center py-8">
@@ -428,13 +458,15 @@ export default function ProfilePage() {
                     </span>
                   </div>
 
-                  {reservation.status !== 'cancelled' && (
+                  {reservation.status !== "cancelled" && (
                     <button
-                      onClick={() => cancelReservation(
-                        reservation.id, 
-                        reservation.event?.event_name || "this event"
-                      )}
-                      className="self-start rounded-xl bg-red-100 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-200 transition"
+                      onClick={() =>
+                        setPendingCancellation({
+                          id: reservation.id,
+                          eventName: reservation.event?.event_name || "this event",
+                        })
+                      }
+                      className="self-start rounded-xl bg-red-100 px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-200"
                     >
                       Cancel
                     </button>
@@ -444,7 +476,52 @@ export default function ProfilePage() {
             </div>
           )}
         </div>
+        </div>
       </div>
-    </div>
+      {pendingCancellation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-3xl border border-gray-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                <FiAlertTriangle className="h-5 w-5" />
+              </span>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">Cancel reservation?</h3>
+                <p className="text-sm text-gray-600">
+                  You&apos;re about to cancel your spot for{" "}
+                  <span className="font-semibold text-gray-900">"{pendingCancellation.eventName}"</span>. This opens the
+                  plate for another student. You can reserve again if servings remain.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleDismissCancellation}
+                className="ml-auto rounded-full bg-gray-100 p-2 text-gray-500 hover:text-gray-700"
+              >
+                <FiX className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={handleDismissCancellation}
+                disabled={processingCancellation}
+                className="rounded-2xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50 disabled:opacity-70"
+              >
+                Keep reservation
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancellation}
+                disabled={processingCancellation}
+                className="rounded-2xl bg-red-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {processingCancellation ? "Canceling..." : "Cancel reservation"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
