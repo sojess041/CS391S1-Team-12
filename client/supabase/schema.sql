@@ -81,6 +81,7 @@ RETURNS TABLE (
   organizer_email TEXT
 )
 LANGUAGE plpgsql
+SET search_path = public
 AS $$
 BEGIN
   RETURN QUERY
@@ -128,12 +129,15 @@ $$;
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
 BEGIN
   NEW.updated_at = TIMEZONE('utc'::text, NOW());
   RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$;
 
 -- Triggers to automatically update updated_at
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users
@@ -215,3 +219,46 @@ CREATE POLICY "Users can update own reservations" ON public.reservations
 -- Users can delete their own reservations
 CREATE POLICY "Users can delete own reservations" ON public.reservations
   FOR DELETE USING (auth.uid() = user_id);
+
+-- Helper function to reserve an event atomically
+CREATE OR REPLACE FUNCTION public.reserve_event(event_id_input UUID, servings INTEGER DEFAULT 1)
+RETURNS TABLE (reservation_id UUID, new_quantity_remaining INTEGER)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  authenticated_user UUID;
+  updated_quantity INTEGER;
+  inserted_reservation UUID;
+BEGIN
+  authenticated_user := auth.uid();
+  IF authenticated_user IS NULL THEN
+    RAISE EXCEPTION 'User must be authenticated to reserve events';
+  END IF;
+
+  IF servings IS NULL OR servings <= 0 THEN
+    RAISE EXCEPTION 'Servings must be greater than zero';
+  END IF;
+
+  UPDATE public.events
+  SET quantity_remaining = quantity_remaining - servings,
+      updated_at = TIMEZONE('utc'::text, NOW())
+  WHERE id = event_id_input
+    AND quantity_remaining >= servings
+    AND is_active = TRUE
+  RETURNING quantity_remaining INTO updated_quantity;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Event unavailable or not enough servings remaining';
+  END IF;
+
+  INSERT INTO public.reservations (user_id, event_id, quantity_reserved, status)
+  VALUES (authenticated_user, event_id_input, servings, 'confirmed')
+  RETURNING id INTO inserted_reservation;
+
+  RETURN QUERY SELECT inserted_reservation, updated_quantity;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.reserve_event(UUID, INTEGER) TO authenticated;

@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, ChangeEvent, FormEvent } from "react";
+import { useState, useEffect, ChangeEvent, FormEvent } from "react";
 import Link from "next/link";
-import { FcGoogle } from "react-icons/fc";
-import { FaGithub } from "react-icons/fa";
+import { useRouter } from "next/navigation";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { DIETARY_RESTRICTIONS } from "@/lib/constants";
+import { supabase } from "@/lib/supabase";
+import Modal, { ModalType } from "@/components/modal";
+/* Implemented signup logic to the same page as UI, but I can create a separate actions page for server actions if necessary */
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -16,8 +19,19 @@ export default function SignUpPage() {
     role: "",
     foodRestrictions: [] as string[],
   });
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title?: string;
+    message: string;
+  }>({
+    isOpen: false,
+    type: "info",
+    message: "",
+  });
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -35,20 +49,146 @@ export default function SignUpPage() {
     }
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    // Check for BU email
+    if (!form.email.endsWith("@bu.edu")) {
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Invalid Email",
+        message: "Please use your BU email address ending with @bu.edu.",
+      });
+      return;
+    }
+
     if (form.password !== form.confirm) {
-      alert("Passwords do not match");
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Password Mismatch",
+        message: "Passwords do not match. Please try again.",
+      });
       return;
     }
+
     if (!form.role) {
-      alert("Please select an account type");
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Account Type Required",
+        message: "Please select an account type (Student or Event Organizer).",
+      });
       return;
     }
-    console.log("Sign up submitted", form);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            full_name: form.name,
+            role: form.role,
+            food_restrictions: form.foodRestrictions,
+          },
+        },
+      });
+
+      if (error) {
+        setModal({
+          isOpen: true,
+          type: "error",
+          title: "Sign Up Failed",
+          message: error.message,
+        });
+        console.error(error);
+        return;
+      }
+
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        // Email confirmation required
+        setModal({
+          isOpen: true,
+          type: "info",
+          title: "Account Created!",
+          message:
+            "Your account has been created successfully!\n\n" +
+            "Please check your email (including your spam/junk folder) to confirm your account before signing in.\n\n" +
+            "If you don't receive an email within a few minutes, email confirmation may be disabled in Supabase settings, or you can manually confirm your account in the Supabase dashboard.",
+        });
+        // Redirect after modal is closed
+        setTimeout(() => {
+          router.push("/login");
+        }, 100);
+        return;
+      }
+
+      // If session exists, user is auto-confirmed (email confirmation disabled)
+      const user = data.user;
+      if (user?.id && user.email) {
+        const resp = await fetch("/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: user.id,
+            email: user.email,
+            role: form.role,
+            full_name: form.name,
+            food_restrictions: form.foodRestrictions,
+          }),
+        });
+
+        if (!resp.ok) {
+          const body = await resp.json().catch(() => ({}));
+          const msg = body?.error || "Failed to save profile";
+          console.error("Profile creation error:", body);
+          setModal({
+            isOpen: true,
+            type: "error",
+            title: "Profile Creation Failed",
+            message: msg,
+          });
+          return;
+        }
+
+        // Auto-login if email confirmation is disabled
+        router.push("/profile");
+      } else {
+        router.push("/login");
+      }
+    } catch (err) {
+      console.error(err);
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Unexpected Error",
+        message: "An unexpected error occurred. Please try again.",
+      });
+    }
   };
 
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      const isValid = session?.user && (!session.expires_at || session.expires_at * 1000 > Date.now());
+
+      if (isValid) {
+        router.replace("/");
+      } else {
+        setCheckingAuth(false);
+      }
+    };
+
+    checkSession();
+  }, [router]);
+
   return (
+    checkingAuth ? null : (
     <div className="w-full max-w-3xl border border-gray-200 rounded-xl shadow-md p-10 sm:p-16 mx-auto mt-12">
       <h1 className="text-3xl font-semibold text-center">
         Sign Up for Spark<span className="text-red-600">!Bytes</span>
@@ -58,6 +198,7 @@ export default function SignUpPage() {
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+        {/* Name */}
         <div className="w-full">
           <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
             Full Name <span className="text-red-600">*</span>
@@ -74,6 +215,7 @@ export default function SignUpPage() {
           />
         </div>
 
+        {/* Email */}
         <div className="w-full">
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
             BU Email Address <span className="text-red-600">*</span>
@@ -91,6 +233,7 @@ export default function SignUpPage() {
           />
         </div>
 
+        {/* Password */}
         <div className="w-full">
           <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
             Password <span className="text-red-600">*</span>
@@ -118,6 +261,7 @@ export default function SignUpPage() {
           </div>
         </div>
 
+        {/* Confirm Password */}
         <div className="w-full">
           <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-1">
             Confirm Password <span className="text-red-600">*</span>
@@ -145,6 +289,7 @@ export default function SignUpPage() {
           </div>
         </div>
 
+        {/* Role */}
         <fieldset className="w-full">
           <legend className="block text-sm font-semibold text-gray-800 mb-2">
             Account Type<span className="text-red-600">*</span>
@@ -175,12 +320,14 @@ export default function SignUpPage() {
           </div>
         </fieldset>
 
+        {/* Dietary Restrictions */}
         <fieldset className="w-full">
           <legend className="block text-sm font-semibold text-gray-800 mb-2">
-            Dietary Restrictions <span className="text-sm font-normal text-gray-600">(Optional - Select all that apply)</span>
+            Dietary Restrictions{" "}
+            <span className="text-sm font-normal text-gray-600">(Optional - Select all that apply)</span>
           </legend>
           <p className="text-xs text-gray-600 mb-3">
-            We'll filter events to show only those that match your dietary needs. Leave blank to see all events.
+            We&#39;ll filter events to show only those that match your dietary needs. Leave blank to see all events.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {DIETARY_RESTRICTIONS.map((option) => (
@@ -199,35 +346,13 @@ export default function SignUpPage() {
           </div>
         </fieldset>
 
+        {/* Submit Button */}
         <button
           type="submit"
           className="mt-2 w-full rounded-lg bg-red-600 text-white font-semibold py-2 shadow-sm hover:shadow-md transition-shadow"
         >
           Sign Up
         </button>
-
-        <div className="flex items-center w-full mt-4">
-          <hr className="flex-grow border-gray-300" />
-          <span className="mx-4 text-sm text-gray-600">Or sign up with</span>
-          <hr className="flex-grow border-gray-300" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mt-2">
-          <button
-            type="button"
-            className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer"
-          >
-            <FcGoogle className="h-5 w-5" aria-hidden />
-            Google
-          </button>
-          <button
-            type="button"
-            className="flex items-center justify-center gap-2 rounded-lg bg-black px-3 py-2 text-sm font-medium text-white hover:bg-gray-900 cursor-pointer"
-          >
-            <FaGithub className="h-5 w-5" aria-hidden />
-            GitHub
-          </button>
-        </div>
 
         <p className="text-center mt-6 text-sm text-gray-700">
           Already have an account?{" "}
@@ -236,6 +361,15 @@ export default function SignUpPage() {
           </Link>
         </p>
       </form>
+
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+      />
     </div>
+    )
   );
 }

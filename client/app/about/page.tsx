@@ -2,13 +2,13 @@ import Image from "next/image";
 
 export default function About() {
   return (
-    <div className="flex flex-col items-center justify-between min-h-screen pt-20 overflow-hidden">
-      <div className="">
-        <h1 className="text-5xl uppercase font-bold text-center">
+    <div className="flex flex-col items-center justify-between min-h-screen bg-gray-50 px-4 pt-20 overflow-hidden">
+      <div className="text-center max-w-5xl px-4">
+        <h1 className="text-5xl font-semibold tracking-tight text-gray-900">
           Welcome to <span className="text-red-600">Spark!</span> Bytes
         </h1>
-        <p className="mx-auto text-lg mt-4 max-w-5xl px-4 text-center leading-relaxed">
-          <span className="font-bold">
+        <p className="mx-auto text-lg mt-4 leading-relaxed text-gray-600">
+          <span className="font-semibold text-gray-900">
             Spark!Bytes is an event made by BU student to help reduce the food waste and feed the BU community.
             Spark!Bytes connects hungry students with leftover event food in real time.
           </span>

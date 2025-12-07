@@ -1,8 +1,10 @@
-export type FormData = {
+export type EventFormData = {
   eventName: string;
   eventLocation: string;
   roomNumber: string;
   eventDate: string;
+  startTime?: string;
+  endTime?: string;
   foodType: string;
   quantity: number;
   eventDescription?: string;
