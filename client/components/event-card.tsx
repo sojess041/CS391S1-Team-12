@@ -70,6 +70,12 @@ export default function EventCard({
           >
             {eventName}
           </Link>
+          <h3
+            className="text-2xl font-extrabold leading-tight text-black min-h-[56px] flex-1"
+            style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+          >
+            {eventName}
+          </h3>
           <button type="button" aria-label="Bookmark event">
             <FaRegBookmark className="h-8 w-8 text-black hover:fill-red-600" />
           </button>
@@ -118,6 +124,7 @@ export default function EventCard({
           )}
           <Link
             href={id ? `/events/${id}` : "/events"}
+            href="/events"
             className="ml-auto rounded-xl translate-x-6 bg-red-600 px-6 py-2 font-semibold text-white shadow-sm transition hover:scale-105"
           >
             View

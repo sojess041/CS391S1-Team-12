@@ -9,6 +9,11 @@ import Modal, { ModalType } from "@/components/modal";
 
 const inputClasses =
   "w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-base text-gray-900 placeholder:text-gray-500 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 transition";
+import { useState, FormEvent, ChangeEvent } from "react";
+import { FormData } from "@/types/form";
+
+const inputClasses =
+  "w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-base text-gray-900 placeholder:text-gray-500 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 transition";
 
 export default function Post() {
   const router = useRouter();
@@ -313,49 +318,19 @@ export default function Post() {
             />
           </div>
 
-          <div className="grid gap-5 md:grid-cols-3">
-            <div>
-              <label htmlFor="eventDate" className="text-sm font-semibold text-gray-900">
-                Date
-              </label>
-              <input
-                id="eventDate"
-                name="eventDate"
-                type="datetime-local"
-                value={formData.eventDate}
-                onChange={handleChange}
-                className={`${inputClasses} mt-2`}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="startTime" className="text-sm font-semibold text-gray-900">
-                Start time
-              </label>
-              <input
-                id="startTime"
-                name="startTime"
-                type="time"
-                value={formData.startTime || ""}
-                onChange={handleChange}
-                className={`${inputClasses} mt-2`}
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="endTime" className="text-sm font-semibold text-gray-900">
-                End time
-              </label>
-              <input
-                id="endTime"
-                name="endTime"
-                type="time"
-                value={formData.endTime || ""}
-                onChange={handleChange}
-                className={`${inputClasses} mt-2`}
-                required
-              />
-            </div>
+          <div className="w-full">
+            <label htmlFor="eventDate" className="text-sm font-semibold text-gray-900">
+              Date & time
+            </label>
+            <input
+              id="eventDate"
+              name="eventDate"
+              type="text"
+              placeholder="March 12, 2:00 PM"
+              value={formData.eventDate}
+              onChange={handleChange}
+              className={`${inputClasses} mt-2`}
+            />
           </div>
 
           <div className="grid gap-5 md:grid-cols-2">
@@ -513,6 +488,36 @@ export default function Post() {
               )}
             </div>
             <p className="mt-2 text-xs text-gray-500">Optional, but photos help events stand out.</p>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div>
+              <label htmlFor="eventTags" className="text-sm font-semibold text-gray-900">
+                Tags
+              </label>
+              <input
+                id="eventTags"
+                name="eventTags"
+                type="text"
+                placeholder="pizza, vegetarian, study break"
+                value={formData.eventTags}
+                onChange={handleChange}
+                className={`${inputClasses} mt-2`}
+              />
+            </div>
+            <div>
+              <label htmlFor="eventImage" className="text-sm font-semibold text-gray-900">
+                Image URL
+              </label>
+              <input
+                id="eventImage"
+                name="eventImage"
+                type="url"
+                placeholder="https://example.com/photo.jpg"
+                value={formData.eventImage}
+                onChange={handleChange}
+                className={`${inputClasses} mt-2`}
+              />
+              <p className="mt-2 text-xs text-gray-500">Optional, but photos help events stand out.</p>
+            </div>
           </div>
 
           <div className="flex flex-col items-center gap-3 pt-4">
@@ -523,6 +528,9 @@ export default function Post() {
               className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-8 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {uploading ? "Uploading image..." : submitting ? "Creating event..." : "Post event"}
+              className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-8 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-red-500"
+            >
+              Post event
             </button>
           </div>
         </form>

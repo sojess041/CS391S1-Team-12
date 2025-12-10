@@ -185,6 +185,7 @@ export default function ProfilePage() {
           title: "Update Failed",
           message: "Failed to update preferences. Please try again.",
         });
+        alert("Failed to update preferences. Please try again.");
       } else {
         setProfile(prev => prev ? { ...prev, food_restrictions: selectedPreferences } : null);
         setEditingPreferences(false);
@@ -209,6 +210,10 @@ export default function ProfilePage() {
         title: "Error",
         message: "An error occurred. Please try again.",
       });
+      }
+    } catch (error) {
+      logger.error("Unexpected error updating preferences", error as Error);
+      alert("An error occurred. Please try again.");
     }
   }
 
@@ -250,6 +255,7 @@ export default function ProfilePage() {
           title: "Cancellation Failed",
           message: "Failed to cancel reservation. Please try again.",
         });
+        alert("Failed to cancel reservation. Please try again.");
       } else {
         setReservations(prev => prev.filter(r => r.id !== reservationId));
         logger.info("Reservation cancelled", { 
@@ -272,6 +278,10 @@ export default function ProfilePage() {
         title: "Error",
         message: "An error occurred. Please try again.",
       });
+      }
+    } catch (error) {
+      logger.error("Unexpected error canceling reservation", error as Error);
+      alert("An error occurred. Please try again.");
     }
   }
 
@@ -303,6 +313,7 @@ export default function ProfilePage() {
           title: "Logout Failed",
           message: "Failed to log out. Please try again.",
         });
+        alert("Failed to log out. Please try again.");
       } else {
         logger.info("User logged out successfully");
         router.push("/login");
@@ -315,6 +326,7 @@ export default function ProfilePage() {
         title: "Error",
         message: "An error occurred. Please try again.",
       });
+      alert("An error occurred. Please try again.");
     }
   }
 

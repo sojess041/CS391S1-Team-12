@@ -58,6 +58,9 @@ export async function POST(req: Request) {
     }
 
     // Insert new user
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
     const { error } = await supabase.from("users").insert({
       id,
       email,
@@ -78,11 +81,13 @@ export async function POST(req: Request) {
         errorMessage = `Invalid data: ${error.message}`;
       }
       return NextResponse.json({ error: errorMessage, code: error.code }, { status: 400 });
+      return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (err: any) {
     console.error("Unexpected error in POST /api/users:", err);
     return NextResponse.json({ error: err?.message ?? "Unknown error occurred" }, { status: 500 });
+    return NextResponse.json({ error: err?.message ?? "Unknown error" }, { status: 500 });
   }
 }

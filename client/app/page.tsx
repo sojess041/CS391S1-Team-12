@@ -85,6 +85,7 @@ export default function Home() {
             code: error.code
           });
           throw new Error(error.message || "Failed to fetch events from database");
+          throw error;
         }
 
         const rows = (data ?? []) as unknown as EventsQueryRow[];
@@ -129,6 +130,8 @@ export default function Home() {
         
         console.error("Unable to fetch events:", errorMessage, errorDetails);
         setEventsError(errorMessage);
+        console.error("Unable to fetch events:", err);
+        setEventsError("Unable to load upcoming events. Please try again later.");
       } finally {
         setLoadingEvents(false);
       }

@@ -60,6 +60,7 @@ export default function SignUpPage() {
         title: "Invalid Email",
         message: "Please use your BU email address ending with @bu.edu.",
       });
+      alert("Please use your BU email address ending with @bu.edu.");
       return;
     }
 
@@ -104,6 +105,7 @@ export default function SignUpPage() {
           title: "Sign Up Failed",
           message: error.message,
         });
+        alert("Error creating account: " + error.message);
         console.error(error);
         return;
       }
@@ -168,6 +170,15 @@ export default function SignUpPage() {
         title: "Unexpected Error",
         message: "An unexpected error occurred. Please try again.",
       });
+          alert(msg);
+          return;
+        }
+      }
+
+      router.push("/login");
+    } catch (err) {
+      console.error(err);
+      alert("An unexpected error occurred. Please try again.");
     }
   };
 

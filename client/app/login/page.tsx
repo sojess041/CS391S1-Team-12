@@ -85,6 +85,11 @@ export default function LoginPage() {
         console.error("Failed to create user profile");
       }
     }
+      alert(error.message);
+      return;
+    }
+
+    router.replace("/profile");
   };
 
   useEffect(() => {
@@ -175,6 +180,7 @@ export default function LoginPage() {
           type="submit"
           disabled={loading}
           className="mt-2 w-full rounded-lg bg-red-600 text-white font-semibold py-2 shadow-sm hover:shadow-md transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-2 w-full rounded-lg bg-red-600 text-white font-semibold py-2 shadow-sm hover:shadow-md transition-shadow"
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>
