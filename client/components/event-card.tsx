@@ -5,6 +5,7 @@ import { FaLocationDot, FaRegBookmark, FaUtensils } from "react-icons/fa6";
 import { LuCalendarClock } from "react-icons/lu";
 
 export default function EventCard({
+  id,
   eventName,
   organizerName,
   eventLocation,
@@ -62,6 +63,13 @@ export default function EventCard({
 
       <div className="px-10 py-3 -translate-x-5 flex flex-col flex-1">
         <div className="my-2 flex items-start justify-between gap-3">
+          <Link
+            href={id ? `/events/${id}` : "#"}
+            className="text-2xl font-extrabold leading-tight text-black min-h-[56px] flex-1 hover:text-red-600 transition cursor-pointer"
+            style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
+          >
+            {eventName}
+          </Link>
           <h3
             className="text-2xl font-extrabold leading-tight text-black min-h-[56px] flex-1"
             style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
@@ -115,6 +123,7 @@ export default function EventCard({
             </div>
           )}
           <Link
+            href={id ? `/events/${id}` : "/events"}
             href="/events"
             className="ml-auto rounded-xl translate-x-6 bg-red-600 px-6 py-2 font-semibold text-white shadow-sm transition hover:scale-105"
           >

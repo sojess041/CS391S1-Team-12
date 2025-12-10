@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { supabase } from "@/lib/supabase";
+import Modal, { ModalType } from "@/components/modal";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,6 +13,16 @@ export default function LoginPage() {
   const [showPwd, setShowPwd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title?: string;
+    message: string;
+  }>({
+    isOpen: false,
+    type: "error",
+    message: "",
+  });
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, type, checked, value } = e.target;
@@ -28,6 +39,52 @@ export default function LoginPage() {
     setLoading(false);
 
     if (error) {
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Login Failed",
+        message: error.message,
+      });
+      return;
+    }
+
+    // Check if user profile exists, create if not
+    await ensureUserProfile();
+    router.replace("/profile");
+  };
+
+  const ensureUserProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Check if user profile exists
+    const { data: existingUser } = await supabase
+      .from("users")
+      .select("id")
+      .eq("id", user.id)
+      .single();
+
+    // If profile doesn't exist, create it
+    if (!existingUser && user.email) {
+      const fullName = user.user_metadata?.full_name || user.user_metadata?.name || user.email.split("@")[0];
+      const role = user.user_metadata?.role || "student";
+      
+      const resp = await fetch("/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: user.id,
+          email: user.email,
+          role: role,
+          full_name: fullName,
+          food_restrictions: user.user_metadata?.food_restrictions || [],
+        }),
+      });
+
+      if (!resp.ok) {
+        console.error("Failed to create user profile");
+      }
+    }
       alert(error.message);
       return;
     }
@@ -122,6 +179,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
+          className="mt-2 w-full rounded-lg bg-red-600 text-white font-semibold py-2 shadow-sm hover:shadow-md transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
           className="mt-2 w-full rounded-lg bg-red-600 text-white font-semibold py-2 shadow-sm hover:shadow-md transition-shadow"
         >
           {loading ? "Signing in..." : "Sign in"}
@@ -134,6 +192,14 @@ export default function LoginPage() {
           </Link>
         </p>
       </form>
+
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+      />
     </div>
     )
   );

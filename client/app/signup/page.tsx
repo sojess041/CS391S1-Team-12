@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FiEye, FiEyeOff } from "react-icons/fi";
 import { DIETARY_RESTRICTIONS } from "@/lib/constants";
 import { supabase } from "@/lib/supabase";
+import Modal, { ModalType } from "@/components/modal";
 /* Implemented signup logic to the same page as UI, but I can create a separate actions page for server actions if necessary */
 
 export default function SignUpPage() {
@@ -21,6 +22,16 @@ export default function SignUpPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title?: string;
+    message: string;
+  }>({
+    isOpen: false,
+    type: "info",
+    message: "",
+  });
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -43,17 +54,33 @@ export default function SignUpPage() {
 
     // Check for BU email
     if (!form.email.endsWith("@bu.edu")) {
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Invalid Email",
+        message: "Please use your BU email address ending with @bu.edu.",
+      });
       alert("Please use your BU email address ending with @bu.edu.");
       return;
     }
 
     if (form.password !== form.confirm) {
-      alert("Passwords do not match");
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Password Mismatch",
+        message: "Passwords do not match. Please try again.",
+      });
       return;
     }
 
     if (!form.role) {
-      alert("Please select an account type");
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Account Type Required",
+        message: "Please select an account type (Student or Event Organizer).",
+      });
       return;
     }
 
@@ -62,6 +89,7 @@ export default function SignUpPage() {
         email: form.email,
         password: form.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
           data: {
             full_name: form.name,
             role: form.role,
@@ -71,11 +99,37 @@ export default function SignUpPage() {
       });
 
       if (error) {
+        setModal({
+          isOpen: true,
+          type: "error",
+          title: "Sign Up Failed",
+          message: error.message,
+        });
         alert("Error creating account: " + error.message);
         console.error(error);
         return;
       }
 
+      // Check if email confirmation is required
+      if (data.user && !data.session) {
+        // Email confirmation required
+        setModal({
+          isOpen: true,
+          type: "info",
+          title: "Account Created!",
+          message:
+            "Your account has been created successfully!\n\n" +
+            "Please check your email (including your spam/junk folder) to confirm your account before signing in.\n\n" +
+            "If you don't receive an email within a few minutes, email confirmation may be disabled in Supabase settings, or you can manually confirm your account in the Supabase dashboard.",
+        });
+        // Redirect after modal is closed
+        setTimeout(() => {
+          router.push("/login");
+        }, 100);
+        return;
+      }
+
+      // If session exists, user is auto-confirmed (email confirmation disabled)
       const user = data.user;
       if (user?.id && user.email) {
         const resp = await fetch("/api/users", {
@@ -93,6 +147,29 @@ export default function SignUpPage() {
         if (!resp.ok) {
           const body = await resp.json().catch(() => ({}));
           const msg = body?.error || "Failed to save profile";
+          console.error("Profile creation error:", body);
+          setModal({
+            isOpen: true,
+            type: "error",
+            title: "Profile Creation Failed",
+            message: msg,
+          });
+          return;
+        }
+
+        // Auto-login if email confirmation is disabled
+        router.push("/profile");
+      } else {
+        router.push("/login");
+      }
+    } catch (err) {
+      console.error(err);
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Unexpected Error",
+        message: "An unexpected error occurred. Please try again.",
+      });
           alert(msg);
           return;
         }
@@ -295,6 +372,14 @@ export default function SignUpPage() {
           </Link>
         </p>
       </form>
+
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+      />
     </div>
     )
   );
