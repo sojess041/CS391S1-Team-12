@@ -53,25 +53,36 @@ export async function getEvents(userId?: string | null): Promise<EventWithOrgani
 
 // Get a single event by ID
 export async function getEventById(eventId: string): Promise<EventWithOrganizer | null> {
-  const { data, error } = await supabase
+  const { data: eventData, error: eventError } = await supabase
     .from('events')
-    .select(`
-      *,
-      organizer:users!events_organizer_id_fkey (
-        full_name,
-        email
-      )
-    `)
+    .select('*')
     .eq('id', eventId)
     .eq('is_active', true)
     .single();
 
-  if (error) {
-    console.error('Error fetching event:', error);
+  if (eventError || !eventData) {
+    console.error('Error fetching event:', eventError);
     return null;
   }
 
-  return data as EventWithOrganizer;
+  // Fetch organizer info separately
+  const { data: organizerData, error: organizerError } = await supabase
+    .from('users')
+    .select('full_name, email')
+    .eq('id', eventData.organizer_id)
+    .single();
+
+  if (organizerError) {
+    console.error('Error fetching organizer:', organizerError);
+  }
+
+  return {
+    ...eventData,
+    organizer: organizerData ? {
+      full_name: organizerData.full_name,
+      email: organizerData.email,
+    } : undefined,
+  } as EventWithOrganizer;
 }
 
 // Search events by query string

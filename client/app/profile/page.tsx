@@ -6,6 +6,7 @@ import { createSupabaseClient } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
 import { FaUtensils, FaClipboardList, FaUser } from "react-icons/fa6";
 import { FiAlertTriangle, FiX } from "react-icons/fi";
+import Modal, { ModalType } from "@/components/modal";
 
 interface Reservation {
   id: string;
@@ -44,6 +45,16 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [editingPreferences, setEditingPreferences] = useState(false);
   const [selectedPreferences, setSelectedPreferences] = useState<string[]>([]);
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title?: string;
+    message: string;
+  }>({
+    isOpen: false,
+    type: "info",
+    message: "",
+  });
   const router = useRouter();
 
   const dietaryOptions = [
@@ -168,6 +179,12 @@ export default function ProfilePage() {
           userId: user.id,
           preferences: selectedPreferences
         });
+        setModal({
+          isOpen: true,
+          type: "error",
+          title: "Update Failed",
+          message: "Failed to update preferences. Please try again.",
+        });
         alert("Failed to update preferences. Please try again.");
       } else {
         setProfile(prev => prev ? { ...prev, food_restrictions: selectedPreferences } : null);
@@ -178,6 +195,21 @@ export default function ProfilePage() {
           preferences: selectedPreferences,
           duration
         });
+        setModal({
+          isOpen: true,
+          type: "success",
+          title: "Preferences Updated",
+          message: "Your dietary preferences have been updated successfully!",
+        });
+      }
+    } catch (error) {
+      logger.error("Unexpected error updating preferences", error as Error);
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Error",
+        message: "An error occurred. Please try again.",
+      });
       }
     } catch (error) {
       logger.error("Unexpected error updating preferences", error as Error);
@@ -217,6 +249,12 @@ export default function ProfilePage() {
           reservationId,
           eventName
         });
+        setModal({
+          isOpen: true,
+          type: "error",
+          title: "Cancellation Failed",
+          message: "Failed to cancel reservation. Please try again.",
+        });
         alert("Failed to cancel reservation. Please try again.");
       } else {
         setReservations(prev => prev.filter(r => r.id !== reservationId));
@@ -225,6 +263,21 @@ export default function ProfilePage() {
           reservationId,
           eventName
         });
+        setModal({
+          isOpen: true,
+          type: "success",
+          title: "Reservation Cancelled",
+          message: `Your reservation for ${eventName} has been cancelled.`,
+        });
+      }
+    } catch (error) {
+      logger.error("Unexpected error canceling reservation", error as Error);
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Error",
+        message: "An error occurred. Please try again.",
+      });
       }
     } catch (error) {
       logger.error("Unexpected error canceling reservation", error as Error);
@@ -254,6 +307,12 @@ export default function ProfilePage() {
       
       if (error) {
         logger.error("Logout failed", error);
+        setModal({
+          isOpen: true,
+          type: "error",
+          title: "Logout Failed",
+          message: "Failed to log out. Please try again.",
+        });
         alert("Failed to log out. Please try again.");
       } else {
         logger.info("User logged out successfully");
@@ -261,6 +320,12 @@ export default function ProfilePage() {
       }
     } catch (err) {
       logger.error("Unexpected error during logout", err as Error);
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Error",
+        message: "An error occurred. Please try again.",
+      });
       alert("An error occurred. Please try again.");
     }
   }
@@ -522,6 +587,14 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+      />
     </>
   );
 }

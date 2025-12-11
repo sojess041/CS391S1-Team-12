@@ -36,6 +36,20 @@ export default function Home() {
     const fetchEvents = async () => {
       setLoadingEvents(true);
       setEventsError(null);
+      
+      // Check if Supabase is configured
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      
+      if (!supabaseUrl || !supabaseKey) {
+        const missing = [];
+        if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL');
+        if (!supabaseKey) missing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+        setEventsError(`Supabase is not configured. Missing: ${missing.join(', ')}. Please check your .env.local file.`);
+        setLoadingEvents(false);
+        return;
+      }
+      
       try {
         const { data, error } = await supabase
           .from("events")
@@ -64,6 +78,13 @@ export default function Home() {
           .limit(10);
 
         if (error) {
+          console.error("Supabase error:", {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          });
+          throw new Error(error.message || "Failed to fetch events from database");
           throw error;
         }
 
@@ -88,6 +109,27 @@ export default function Home() {
 
         setEvents(mappedEvents);
       } catch (err) {
+        let errorMessage = 'Unknown error occurred';
+        let errorDetails: any = err;
+        
+        if (err instanceof Error) {
+          errorMessage = err.message;
+          errorDetails = {
+            message: err.message,
+            stack: err.stack,
+            name: err.name
+          };
+          
+          // Check for specific error types
+          if (err.message.includes('Failed to fetch') || err.name === 'TypeError') {
+            errorMessage = 'Network error: Unable to connect to Supabase. Please check your .env.local file has NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY set correctly.';
+          }
+        } else if (typeof err === 'string') {
+          errorMessage = err;
+        }
+        
+        console.error("Unable to fetch events:", errorMessage, errorDetails);
+        setEventsError(errorMessage);
         console.error("Unable to fetch events:", err);
         setEventsError("Unable to load upcoming events. Please try again later.");
       } finally {
