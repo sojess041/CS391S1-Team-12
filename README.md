@@ -132,6 +132,17 @@ client/
   public/                  # Static assets
 ```
 
+## Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed deployment instructions. The app is ready to deploy to Vercel, Netlify, or any platform that supports Next.js.
+
+**Quick Deploy to Vercel:**
+1. Push code to GitHub
+2. Import project in Vercel
+3. Set root directory to `client`
+4. Add environment variables
+5. Deploy!
+
 ## Future Work / Planned Features
 
 - **Advanced filtering & search** - Filter events by building, time window, dietary tags
