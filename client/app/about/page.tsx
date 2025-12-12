@@ -18,7 +18,7 @@ export default function About() {
         </p>
       </div>
       <Image src="/terrier_about.png" width={500} height={500} alt="terrier" />
-      <footer className="min-w-screen bg-red-700 p-10">
+      <footer className="min-w-screen bg-red-700 dark:bg-red-900 p-10 transition-colors duration-300">
         <p className="max-w-6xl mx-auto text-center text-white font-bold text-xl">
           Explore Events: See what's available near you by time, location, and food type. Post Leftovers: Hosting an
           event? <br />

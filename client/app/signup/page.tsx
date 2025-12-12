@@ -7,7 +7,6 @@ import { FiEye, FiEyeOff } from "react-icons/fi";
 import { DIETARY_RESTRICTIONS } from "@/lib/constants";
 import { supabase } from "@/lib/supabase";
 import Modal, { ModalType } from "@/components/modal";
-/* Implemented signup logic to the same page as UI, but I can create a separate actions page for server actions if necessary */
 
 export default function SignUpPage() {
   const router = useRouter();
