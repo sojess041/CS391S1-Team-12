@@ -79,8 +79,8 @@ export async function getEventById(eventId: string): Promise<EventWithOrganizer 
   return {
     ...eventData,
     organizer: organizerData ? {
-      full_name: organizerData.full_name,
-      email: organizerData.email,
+      full_name: organizerData.full_name || "",
+      email: organizerData.email || "",
     } : undefined,
   } as EventWithOrganizer;
 }

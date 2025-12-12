@@ -200,19 +200,19 @@ export default function SignUpPage() {
 
   return (
     checkingAuth ? null : (
-    <div className="w-full max-w-3xl border border-gray-200 rounded-xl shadow-md p-10 sm:p-16 mx-auto mt-12">
-      <h1 className="text-3xl font-semibold text-center">
-        Sign Up for Spark<span className="text-red-600">!Bytes</span>
+    <div className="w-full max-w-3xl border border-gray-200 dark:border-slate-700 rounded-xl shadow-md bg-white dark:bg-slate-800 p-10 sm:p-16 mx-auto mt-12 transition-colors duration-300">
+      <h1 className="text-3xl font-semibold text-center text-gray-900 dark:text-slate-100">
+        Sign Up for Spark<span className="text-red-600 dark:text-red-500">!Bytes</span>
       </h1>
-      <p className="italic text-center mt-2">
+      <p className="italic text-center mt-2 text-gray-600 dark:text-slate-400">
         Welcome to Spark!Bytes! Please create an account to reserve food and post events.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
         {/* Name */}
         <div className="w-full">
-          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-            Full Name <span className="text-red-600">*</span>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+            Full Name <span className="text-red-600 dark:text-red-500">*</span>
           </label>
           <input
             id="name"
@@ -220,7 +220,7 @@ export default function SignUpPage() {
             type="text"
             value={form.name}
             onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none"
+            className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400"
             placeholder="Full Name"
             required
           />
@@ -228,8 +228,8 @@ export default function SignUpPage() {
 
         {/* Email */}
         <div className="w-full">
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            BU Email Address <span className="text-red-600">*</span>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+            BU Email Address <span className="text-red-600 dark:text-red-500">*</span>
           </label>
           <input
             id="email"
@@ -237,7 +237,7 @@ export default function SignUpPage() {
             type="email"
             value={form.email}
             onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none"
+            className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400"
             placeholder="BU Email Address"
             autoComplete="email"
             required
@@ -246,8 +246,8 @@ export default function SignUpPage() {
 
         {/* Password */}
         <div className="w-full">
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-            Password <span className="text-red-600">*</span>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+            Password <span className="text-red-600 dark:text-red-500">*</span>
           </label>
           <div className="relative">
             <input
@@ -256,7 +256,7 @@ export default function SignUpPage() {
               type={showPwd ? "text" : "password"}
               value={form.password}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:outline-none"
+              className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400"
               placeholder="Password"
               autoComplete="new-password"
               required
@@ -264,7 +264,7 @@ export default function SignUpPage() {
             <button
               type="button"
               onClick={() => setShowPwd((s) => !s)}
-              className="absolute inset-y-0 right-2 my-auto p-1 text-gray-600"
+              className="absolute inset-y-0 right-2 my-auto p-1 text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-300"
               aria-label={showPwd ? "Hide password" : "Show password"}
             >
               {showPwd ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
@@ -274,8 +274,8 @@ export default function SignUpPage() {
 
         {/* Confirm Password */}
         <div className="w-full">
-          <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 mb-1">
-            Confirm Password <span className="text-red-600">*</span>
+          <label htmlFor="confirm" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+            Confirm Password <span className="text-red-600 dark:text-red-500">*</span>
           </label>
           <div className="relative">
             <input
@@ -284,7 +284,7 @@ export default function SignUpPage() {
               type={showConfirm ? "text" : "password"}
               value={form.confirm}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:outline-none"
+              className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400"
               placeholder="Confirm Password"
               autoComplete="new-password"
               required
@@ -292,7 +292,7 @@ export default function SignUpPage() {
             <button
               type="button"
               onClick={() => setShowConfirm((s) => !s)}
-              className="absolute inset-y-0 right-2 my-auto p-1 text-gray-600"
+              className="absolute inset-y-0 right-2 my-auto p-1 text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-300"
               aria-label={showConfirm ? "Hide password" : "Show password"}
             >
               {showConfirm ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
@@ -302,10 +302,10 @@ export default function SignUpPage() {
 
         {/* Role */}
         <fieldset className="w-full">
-          <legend className="block text-sm font-semibold text-gray-800 mb-2">
-            Account Type<span className="text-red-600">*</span>
+          <legend className="block text-sm font-semibold text-gray-800 dark:text-slate-200 mb-2">
+            Account Type<span className="text-red-600 dark:text-red-500">*</span>
           </legend>
-          <div className="flex items-center gap-6 text-gray-800">
+          <div className="flex items-center gap-6 text-gray-800 dark:text-slate-300">
             <label className="inline-flex items-center gap-2">
               <input
                 type="radio"
@@ -313,7 +313,7 @@ export default function SignUpPage() {
                 value="student"
                 checked={form.role === "student"}
                 onChange={() => setForm((prev) => ({ ...prev, role: "student" }))}
-                className="h-4 w-4 border-gray-300"
+                className="h-4 w-4 border-gray-300 dark:border-slate-600 text-red-600 dark:text-red-500 focus:ring-red-500 dark:focus:ring-red-400 bg-white dark:bg-slate-900"
               />
               Student
             </label>
@@ -324,7 +324,7 @@ export default function SignUpPage() {
                 value="organizer"
                 checked={form.role === "organizer"}
                 onChange={() => setForm((prev) => ({ ...prev, role: "organizer" }))}
-                className="h-4 w-4 border-gray-300"
+                className="h-4 w-4 border-gray-300 dark:border-slate-600 text-red-600 dark:text-red-500 focus:ring-red-500 dark:focus:ring-red-400 bg-white dark:bg-slate-900"
               />
               Event Organizer
             </label>
@@ -333,23 +333,23 @@ export default function SignUpPage() {
 
         {/* Dietary Restrictions */}
         <fieldset className="w-full">
-          <legend className="block text-sm font-semibold text-gray-800 mb-2">
+          <legend className="block text-sm font-semibold text-gray-800 dark:text-slate-200 mb-2">
             Dietary Restrictions{" "}
-            <span className="text-sm font-normal text-gray-600">(Optional - Select all that apply)</span>
+            <span className="text-sm font-normal text-gray-600 dark:text-slate-400">(Optional - Select all that apply)</span>
           </legend>
-          <p className="text-xs text-gray-600 mb-3">
+          <p className="text-xs text-gray-600 dark:text-slate-400 mb-3">
             We&#39;ll filter events to show only those that match your dietary needs. Leave blank to see all events.
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {DIETARY_RESTRICTIONS.map((option) => (
-              <label key={option.value} className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <label key={option.value} className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
                 <input
                   type="checkbox"
                   name="foodRestriction"
                   value={option.value}
                   checked={form.foodRestrictions.includes(option.value)}
                   onChange={handleChange}
-                  className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500"
+                  className="h-4 w-4 rounded border-gray-300 dark:border-slate-600 text-red-600 dark:text-red-500 focus:ring-red-500 dark:focus:ring-red-400 bg-white dark:bg-slate-900"
                 />
                 {option.label}
               </label>
@@ -365,9 +365,9 @@ export default function SignUpPage() {
           Sign Up
         </button>
 
-        <p className="text-center mt-6 text-sm text-gray-700">
+        <p className="text-center mt-6 text-sm text-gray-700 dark:text-slate-300">
           Already have an account?{" "}
-          <Link href="/login" className="font-medium text-red-600 hover:text-red-700 underline underline-offset-4">
+          <Link href="/login" className="font-medium text-red-600 dark:text-red-500 hover:text-red-700 dark:hover:text-red-400 underline underline-offset-4">
             Log in
           </Link>
         </p>

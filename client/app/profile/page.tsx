@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { FaUtensils, FaClipboardList, FaUser } from "react-icons/fa6";
 import { FiAlertTriangle, FiX } from "react-icons/fi";
 import Modal, { ModalType } from "@/components/modal";
+import ThemeToggle from "@/components/theme-toggle";
 
 interface Reservation {
   id: string;
@@ -210,10 +211,6 @@ export default function ProfilePage() {
         title: "Error",
         message: "An error occurred. Please try again.",
       });
-      }
-    } catch (error) {
-      logger.error("Unexpected error updating preferences", error as Error);
-      alert("An error occurred. Please try again.");
     }
   }
 
@@ -278,10 +275,6 @@ export default function ProfilePage() {
         title: "Error",
         message: "An error occurred. Please try again.",
       });
-      }
-    } catch (error) {
-      logger.error("Unexpected error canceling reservation", error as Error);
-      alert("An error occurred. Please try again.");
     }
   }
 
@@ -332,10 +325,10 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
         <div className="text-center">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-red-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your profile...</p>
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 dark:border-slate-600 border-t-red-600 dark:border-t-red-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-slate-400">Loading your profile...</p>
         </div>
       </div>
     );
@@ -343,9 +336,9 @@ export default function ProfilePage() {
 
   if (!profile) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
         <div className="text-center">
-          <p className="text-gray-600">Please log in to view your profile.</p>
+          <p className="text-gray-600 dark:text-slate-400">Please log in to view your profile.</p>
         </div>
       </div>
     );
@@ -353,7 +346,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      <div className="relative min-h-screen bg-gray-50">
+      <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
         <div className="pointer-events-none absolute bottom-0 right-[80px] hidden md:block" aria-hidden="true">
           <Image src="/terrier_4.png" alt="Boston terriers" width={200} height={200} priority />
         </div>
@@ -366,16 +359,19 @@ export default function ProfilePage() {
                 <FaUser className="h-6 w-6" />
               </span>
               <div>
-                <h1 className="text-3xl font-semibold text-gray-900">{profile.full_name}</h1>
-                <p className="mt-1 text-gray-600">{profile.email}</p>
+                <h1 className="text-3xl font-semibold text-gray-900 dark:text-slate-100">{profile.full_name}</h1>
+                <p className="mt-1 text-gray-600 dark:text-slate-400">{profile.email}</p>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="rounded-xl bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300 transition"
-            >
-              Log Out
-            </button>
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <button
+                onClick={handleLogout}
+                className="rounded-xl bg-gray-200 dark:bg-slate-700 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-slate-200 hover:bg-gray-300 dark:hover:bg-slate-600 transition"
+              >
+                Log Out
+              </button>
+            </div>
           </div>
         </div>
 

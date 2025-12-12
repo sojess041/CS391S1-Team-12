@@ -140,12 +140,15 @@ END;
 $$;
 
 -- Triggers to automatically update updated_at
+DROP TRIGGER IF EXISTS update_users_updated_at ON public.users;
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_events_updated_at ON public.events;
 CREATE TRIGGER update_events_updated_at BEFORE UPDATE ON public.events
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_reservations_updated_at ON public.reservations;
 CREATE TRIGGER update_reservations_updated_at BEFORE UPDATE ON public.reservations
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -157,24 +160,36 @@ ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reservations ENABLE ROW LEVEL SECURITY;
 
 -- Users policies
+-- Users can insert their own profile (when signing up)
+DROP POLICY IF EXISTS "Users can insert own profile" ON public.users;
+CREATE POLICY "Users can insert own profile" ON public.users
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
 -- Users can read their own profile
+DROP POLICY IF EXISTS "Users can read own profile" ON public.users;
 CREATE POLICY "Users can read own profile" ON public.users
   FOR SELECT USING (auth.uid() = id);
 
 -- Users can update their own profile
+DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
 CREATE POLICY "Users can update own profile" ON public.users
   FOR UPDATE USING (auth.uid() = id);
 
 -- Users can read other users' basic info (for organizer names, etc.)
+DROP POLICY IF EXISTS "Users can read other users basic info" ON public.users;
 CREATE POLICY "Users can read other users basic info" ON public.users
   FOR SELECT USING (true);
 
 -- Events policies
--- Anyone can read active events
+-- Drop existing policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Anyone can read active events" ON public.events;
+DROP POLICY IF EXISTS "Organizers can create events" ON public.events;
+DROP POLICY IF EXISTS "Organizers can update own events" ON public.events;
+DROP POLICY IF EXISTS "Organizers can delete own events" ON public.events;
+
 CREATE POLICY "Anyone can read active events" ON public.events
   FOR SELECT USING (is_active = true);
 
--- Only organizers can create events
 CREATE POLICY "Organizers can create events" ON public.events
   FOR INSERT WITH CHECK (
     EXISTS (
@@ -183,7 +198,6 @@ CREATE POLICY "Organizers can create events" ON public.events
     )
   );
 
--- Organizers can update their own events
 CREATE POLICY "Organizers can update own events" ON public.events
   FOR UPDATE USING (
     organizer_id = auth.uid() AND
@@ -193,7 +207,6 @@ CREATE POLICY "Organizers can update own events" ON public.events
     )
   );
 
--- Organizers can delete their own events
 CREATE POLICY "Organizers can delete own events" ON public.events
   FOR DELETE USING (
     organizer_id = auth.uid() AND
@@ -204,19 +217,21 @@ CREATE POLICY "Organizers can delete own events" ON public.events
   );
 
 -- Reservations policies
--- Users can read their own reservations
+-- Drop existing policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Users can read own reservations" ON public.reservations;
+DROP POLICY IF EXISTS "Users can create own reservations" ON public.reservations;
+DROP POLICY IF EXISTS "Users can update own reservations" ON public.reservations;
+DROP POLICY IF EXISTS "Users can delete own reservations" ON public.reservations;
+
 CREATE POLICY "Users can read own reservations" ON public.reservations
   FOR SELECT USING (auth.uid() = user_id);
 
--- Users can create reservations for themselves
 CREATE POLICY "Users can create own reservations" ON public.reservations
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- Users can update their own reservations
 CREATE POLICY "Users can update own reservations" ON public.reservations
   FOR UPDATE USING (auth.uid() = user_id);
 
--- Users can delete their own reservations
 CREATE POLICY "Users can delete own reservations" ON public.reservations
   FOR DELETE USING (auth.uid() = user_id);
 

@@ -239,23 +239,23 @@ export default function EventsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 px-4 py-12 sm:px-6 lg:px-8 transition-colors duration-300">
       <div className="mx-auto max-w-6xl space-y-8">
-        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="rounded-3xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm sm:p-8 transition-colors duration-300">
           <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
             <div className="max-w-2xl text-center md:text-left">
-              <p className="text-xs uppercase tracking-[0.4em] text-gray-500">Campus roundup</p>
-              <h1 className="mt-2 text-4xl font-semibold text-gray-900">Events with servings left</h1>
-              <p className="mt-2 text-base text-gray-600">
+              <p className="text-xs uppercase tracking-[0.4em] text-gray-500 dark:text-slate-400">Campus roundup</p>
+              <h1 className="mt-2 text-4xl font-semibold text-gray-900 dark:text-slate-100">Events with servings left</h1>
+              <p className="mt-2 text-base text-gray-600 dark:text-slate-400">
                 Browse every active event that still has food to share. Filters keep the view focused without changing the theme.
               </p>
             </div>
             <div className="flex w-full justify-center md:w-auto md:justify-end">
               <div className="grid gap-4 sm:grid-cols-1">
                 {highlightStats.map((stat) => (
-                  <div key={stat.label} className="rounded-2xl border border-gray-200 bg-gray-50 px-5 py-4 text-center">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{stat.label}</p>
-                    <p className="mt-1 text-3xl font-semibold text-gray-900">{stat.value}</p>
+                  <div key={stat.label} className="rounded-2xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700 px-5 py-4 text-center transition-colors duration-300">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-slate-400">{stat.label}</p>
+                    <p className="mt-1 text-3xl font-semibold text-gray-900 dark:text-slate-100">{stat.value}</p>
                   </div>
                 ))}
               </div>
@@ -263,18 +263,18 @@ export default function EventsPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-6 shadow-sm transition-colors duration-300">
           <div className="flex flex-col gap-1">
-            <h2 className="text-2xl font-semibold text-gray-900">Current listings</h2>
-            <p className="text-sm text-gray-500">Every active event with servings remaining, sorted by date.</p>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-slate-100">Current listings</h2>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Every active event with servings remaining, sorted by date.</p>
           </div>
 
           {feedback && (
             <div
-              className={`mt-6 rounded-2xl border px-4 py-3 text-sm ${
+              className={`mt-6 rounded-2xl border px-4 py-3 text-sm transition-colors duration-300 ${
                 feedback.type === "success"
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                  : "border-red-200 bg-red-50 text-red-700"
+                  ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+                  : "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300"
               }`}
             >
               {feedback.message}
@@ -282,10 +282,10 @@ export default function EventsPage() {
           )}
 
           <div className="mt-8 min-h-[240px]">
-            {loading && <p className="text-center text-gray-600">Loading events...</p>}
-            {!loading && error && <p className="text-center text-red-600">{error}</p>}
+            {loading && <p className="text-center text-gray-600 dark:text-slate-400">Loading events...</p>}
+            {!loading && error && <p className="text-center text-red-600 dark:text-red-400">{error}</p>}
             {!loading && !error && filteredEvents.length === 0 && (
-              <p className="text-center text-gray-600">
+              <p className="text-center text-gray-600 dark:text-slate-400">
                 No events currently match this view. Try switching filters or check back later!
               </p>
             )}
@@ -302,10 +302,10 @@ export default function EventsPage() {
                   return (
                     <article
                       key={event.id ?? event.eventName}
-                      className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white/70 p-5 shadow-sm transition hover:border-gray-300 hover:bg-white"
+                      className="flex flex-col gap-4 rounded-2xl border border-gray-200 dark:border-slate-700 bg-white/70 dark:bg-slate-800/70 p-5 shadow-sm transition hover:border-gray-300 dark:hover:border-slate-600 hover:bg-white dark:hover:bg-slate-800"
                     >
                       <div className="flex flex-col gap-4 md:flex-row">
-                        <div className="relative h-48 w-full overflow-hidden rounded-2xl bg-gray-100 md:h-48 md:w-64">
+                        <div className="relative h-48 w-full overflow-hidden rounded-2xl bg-gray-100 dark:bg-slate-700 md:h-48 md:w-64">
                           {event.eventImage ? (
                             <Image
                               src={event.eventImage}
@@ -315,7 +315,7 @@ export default function EventsPage() {
                               className="object-cover"
                             />
                           ) : (
-                            <div className="flex h-full items-center justify-center text-sm font-semibold text-gray-500">
+                            <div className="flex h-full items-center justify-center text-sm font-semibold text-gray-500 dark:text-slate-400">
                               Image coming soon
                             </div>
                           )}
@@ -323,38 +323,38 @@ export default function EventsPage() {
                         <div className="flex flex-1 flex-col gap-4">
                           <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
                             <div>
-                              <p className="text-sm font-semibold uppercase tracking-wide text-red-600">
+                              <p className="text-sm font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">
                                 {formatEventDate(event.eventDate)}
                               </p>
-                              <h3 className="mt-1 text-2xl font-semibold text-gray-900">{event.eventName}</h3>
-                              <p className="mt-1 text-sm text-gray-500">
+                              <h3 className="mt-1 text-2xl font-semibold text-gray-900 dark:text-slate-100">{event.eventName}</h3>
+                              <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
                                 {event.eventLocation}
                                 {event.roomNumber ? ` · Room ${event.roomNumber}` : ""}
                               </p>
                               {event.organizerName && (
-                                <p className="text-sm text-gray-500">Hosted by {event.organizerName}</p>
+                                <p className="text-sm text-gray-500 dark:text-slate-400">Hosted by {event.organizerName}</p>
                               )}
                             </div>
-                            <div className="text-sm text-gray-600 lg:text-right">
-                              <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-600">
+                            <div className="text-sm text-gray-600 dark:text-slate-400 lg:text-right">
+                              <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-slate-700 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-slate-300">
                                 {event.foodType}
                               </span>
-                              <p className="mt-2 text-base font-semibold text-gray-900">
+                              <p className="mt-2 text-base font-semibold text-gray-900 dark:text-slate-100">
                                 {formatEventTimeRange(event.startTime, event.endTime)}
                               </p>
                               <p className="text-sm">
-                                <span className="font-semibold text-gray-900">{event.quantityRemaining}</span> of{" "}
+                                <span className="font-semibold text-gray-900 dark:text-slate-100">{event.quantityRemaining}</span> of{" "}
                                 {event.quantity} servings left
                               </p>
                             </div>
                           </div>
-                          {description && <p className="text-sm text-gray-600">{description}</p>}
+                          {description && <p className="text-sm text-gray-600 dark:text-slate-400">{description}</p>}
                           <div className="flex flex-wrap items-center gap-3">
                             <div className="flex flex-wrap gap-2">
                               {tags.map((tag) => (
                                 <span
                                   key={tag}
-                                  className="inline-flex items-center rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700"
+                                  className="inline-flex items-center rounded-full bg-red-50 dark:bg-red-900/30 px-3 py-1 text-xs font-semibold text-red-700 dark:text-red-300"
                                 >
                                   {tag}
                                 </span>
@@ -366,8 +366,8 @@ export default function EventsPage() {
                               disabled={disabled}
                               className={`ml-auto inline-flex items-center rounded-2xl px-5 py-2 text-sm font-semibold transition ${
                                 disabled
-                                  ? "cursor-not-allowed border border-gray-200 bg-gray-100 text-gray-500"
-                                  : "border border-red-200 text-red-600 hover:bg-red-50"
+                                  ? "cursor-not-allowed border border-gray-200 dark:border-slate-700 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400"
+                                  : "border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
                               }`}
                             >
                               {reservingId === event.id ? "Reserving..." : "Reserve a plate"}

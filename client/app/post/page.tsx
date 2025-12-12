@@ -1,48 +1,74 @@
 "use client";
 import Image from "next/image";
-import { useState, FormEvent, ChangeEvent, useRef } from "react";
+import { useState, FormEvent, ChangeEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { createEvent } from "@/lib/db";
-import { EventFormData } from "@/types/form";
-import Modal, { ModalType } from "@/components/modal";
+import { Location, FoodCategory } from "@/types/database";
+import { FOOD_CATEGORIES, FOOD_CATEGORY_COLORS } from "@/lib/constants";
 
 const inputClasses =
-  "w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-base text-gray-900 placeholder:text-gray-500 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 transition";
-import { useState, FormEvent, ChangeEvent } from "react";
-import { FormData } from "@/types/form";
-
-const inputClasses =
-  "w-full rounded-2xl border border-gray-200 bg-white px-4 py-2.5 text-base text-gray-900 placeholder:text-gray-500 focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-100 transition";
+  "w-full rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-base text-gray-900 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:border-red-400 dark:focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/20 transition";
 
 export default function Post() {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [formData, setFormData] = useState<EventFormData>({
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [isOrganizer, setIsOrganizer] = useState(false);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedImages, setSelectedImages] = useState<File[]>([]);
+  const [formData, setFormData] = useState({
     eventName: "",
-    eventLocation: "",
+    locationId: "",
     roomNumber: "",
     eventDate: "",
-    foodType: "",
+    startTime: "",
+    endTime: "",
+    foodCategories: [] as FoodCategory[],
     quantity: 0,
     eventDescription: "",
     eventTags: "",
-    eventImage: "",
   });
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [modal, setModal] = useState<{
-    isOpen: boolean;
-    type: ModalType;
-    title?: string;
-    message: string;
-  }>({
-    isOpen: false,
-    type: "error",
-    message: "",
-  });
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+
+      // Check if user is organizer
+      const { data: userData } = await supabase
+        .from("users")
+        .select("is_organizer, role")
+        .eq("id", user.id)
+        .single();
+
+      const canPost = userData?.is_organizer || userData?.role === "organizer";
+      setIsOrganizer(canPost);
+
+      if (!canPost) {
+        alert("Only organizers can post events. Please enable organizer mode in settings.");
+        router.replace("/settings");
+        return;
+      }
+
+      // Fetch locations
+      const { data: locationsData } = await supabase
+        .from("locations")
+        .select("*")
+        .eq("is_active", true)
+        .order("name");
+
+      setLocations(locationsData || []);
+      setLoading(false);
+    };
+
+    checkAuth();
+  }, [router]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -52,105 +78,53 @@ export default function Post() {
     }));
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const toggleFoodCategory = (category: FoodCategory) => {
+    setFormData((prev) => ({
+      ...prev,
+      foodCategories: prev.foodCategories.includes(category)
+        ? prev.foodCategories.filter((c) => c !== category)
+        : [...prev.foodCategories, category],
+    }));
+  };
 
-    // Validate file type
-    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
-    if (!validTypes.includes(file.type)) {
-      setModal({
-        isOpen: true,
-        type: "error",
-        title: "Invalid File Type",
-        message: "Please upload a JPEG, PNG, WebP, or GIF image.",
-      });
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+
+    const remainingSlots = 5 - selectedImages.length;
+    if (remainingSlots <= 0) {
+      alert("Maximum 5 images per event");
+      e.target.value = "";
       return;
     }
 
-    // Validate file size (max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      setModal({
-        isOpen: true,
-        type: "error",
-        title: "File Too Large",
-        message: "File size too large. Maximum size is 5MB.",
-      });
-      return;
+    const validFiles: File[] = [];
+    const oversizedFiles: string[] = [];
+
+    files.slice(0, remainingSlots).forEach((file) => {
+      if (file.size > 5 * 1024 * 1024) {
+        oversizedFiles.push(file.name);
+        return;
+      }
+      validFiles.push(file);
+    });
+
+    if (files.length > remainingSlots) {
+      alert(`You can upload up to 5 images total. Skipped ${files.length - remainingSlots} file(s).`);
     }
 
-    setSelectedFile(file);
+    if (oversizedFiles.length > 0) {
+      alert(`These files are too large (5MB max): ${oversizedFiles.join(", ")}`);
+    }
 
-    // Create preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    if (validFiles.length > 0) {
+      setSelectedImages((prev) => [...prev, ...validFiles]);
+    }
+    e.target.value = "";
   };
 
-  const handleRemoveImage = () => {
-    setSelectedFile(null);
-    setImagePreview(null);
-    setFormData((prev) => ({ ...prev, eventImage: "" }));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  const uploadImage = async (userId: string): Promise<string | null> => {
-    if (!selectedFile) return null;
-
-    setUploading(true);
-    try {
-      // Validate file type
-      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
-      if (!validTypes.includes(selectedFile.type)) {
-        throw new Error("Invalid file type. Please upload a JPEG, PNG, WebP, or GIF image.");
-      }
-
-      // Validate file size (max 5MB)
-      const maxSize = 5 * 1024 * 1024; // 5MB
-      if (selectedFile.size > maxSize) {
-        throw new Error("File size too large. Maximum size is 5MB.");
-      }
-
-      // Generate unique filename
-      const fileExt = selectedFile.name.split(".").pop();
-      const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-      // Upload directly to Supabase Storage (uses authenticated session)
-      const { data, error } = await supabase.storage
-        .from("event-images")
-        .upload(fileName, selectedFile, {
-          contentType: selectedFile.type,
-          upsert: false,
-        });
-
-      if (error) {
-        console.error("Upload error:", error);
-        throw new Error(error.message || "Failed to upload image");
-      }
-
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("event-images").getPublicUrl(data.path);
-
-      return publicUrl;
-    } catch (err: any) {
-      console.error("Upload error:", err);
-      setModal({
-        isOpen: true,
-        type: "error",
-        title: "Upload Failed",
-        message: err.message || "Failed to upload image. Please try again.",
-      });
-      return null;
-    } finally {
-      setUploading(false);
-    }
+  const handleRemoveImage = (index: number) => {
+    setSelectedImages((prev) => prev.filter((_, idx) => idx !== index));
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -158,123 +132,181 @@ export default function Post() {
     setSubmitting(true);
 
     try {
-      // Get authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
-        router.push("/login");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/login");
         return;
-      }
-
-      // Check if user is an organizer
-      const { data: userData } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      if (!userData || userData.role !== "organizer") {
-        setModal({
-          isOpen: true,
-          type: "error",
-          title: "Permission Denied",
-          message: "Only organizers can create events. Please update your profile to organizer role.",
-        });
-        setSubmitting(false);
-        return;
-      }
-
-      // Upload image if selected
-      let imageUrl = formData.eventImage || null;
-      if (selectedFile) {
-        const uploadedUrl = await uploadImage(user.id);
-        if (uploadedUrl) {
-          imageUrl = uploadedUrl;
-        } else {
-          setSubmitting(false);
-          return;
-        }
       }
 
       // Parse date and time
-      // eventDate from datetime-local is in format: YYYY-MM-DDTHH:MM
-      // Extract date part and combine with start time for event_date
-      // Use separate start_time and end_time inputs
-      let eventDateStr = formData.eventDate;
-      
-      // Extract date part (YYYY-MM-DD) from datetime-local
-      if (eventDateStr.includes("T")) {
-        eventDateStr = eventDateStr.split("T")[0];
-      }
-      
-      // Combine date with start time for event_date (TIMESTAMP WITH TIME ZONE)
-      const startTime = formData.startTime || "00:00";
-      const endTime = formData.endTime || "23:59";
-      const eventDateTime = `${eventDateStr}T${startTime}:00`;
+      const eventDateTime = new Date(`${formData.eventDate}T${formData.startTime}`);
 
-      // Parse tags
-      const tags = formData.eventTags
-        ? formData.eventTags.split(",").map((tag) => tag.trim()).filter(Boolean)
-        : [];
+      // Get selected location
+      const selectedLocation = locations.find((loc) => loc.id === formData.locationId);
+
+      // Combine food categories and tags
+      const allTags = [
+        ...formData.foodCategories,
+        ...(formData.eventTags
+          ? formData.eventTags.split(",").map((tag) => tag.trim()).filter(Boolean)
+          : []),
+      ];
 
       // Create event
-      await createEvent({
-        organizer_id: user.id,
-        event_name: formData.eventName,
-        event_location: formData.eventLocation,
-        room_number: formData.roomNumber || undefined,
-        event_date: eventDateTime,
-        start_time: startTime,
-        end_time: endTime,
-        food_type: formData.foodType,
-        quantity: formData.quantity,
-        event_description: formData.eventDescription || undefined,
-        event_tags: tags,
-        event_image: imageUrl || undefined,
-      });
+      const { data: event, error: eventError } = await supabase
+        .from("events")
+        .insert({
+          organizer_id: user.id,
+          event_name: formData.eventName,
+          event_location: selectedLocation?.name || formData.locationId,
+          room_number: formData.roomNumber || null,
+          event_date: eventDateTime.toISOString(),
+          start_time: formData.startTime,
+          end_time: formData.endTime,
+          food_type: formData.foodCategories[0] || "OTHER",
+          quantity: formData.quantity,
+          quantity_remaining: formData.quantity,
+          event_description: formData.eventDescription || null,
+          event_tags: allTags,
+        })
+        .select()
+        .single();
 
-      // Show success message
-      setModal({
-        isOpen: true,
-        type: "success",
-        title: "Event Created!",
-        message: "Your event has been posted successfully!",
-      });
-      // Redirect to events page after a short delay
-      setTimeout(() => {
-        router.push("/events");
-      }, 1500);
-    } catch (err: any) {
-      console.error("Error creating event:", err);
-      setModal({
-        isOpen: true,
-        type: "error",
-        title: "Failed to Create Event",
-        message: err.message || "Failed to create event. Please try again.",
-      });
+      if (eventError) {
+        throw eventError;
+      }
+
+      // Upload images if any
+      if (selectedImages.length > 0) {
+        const uploadErrors: string[] = [];
+        for (const file of selectedImages) {
+          const imageFormData = new FormData();
+          imageFormData.append("file", file);
+
+          try {
+            const imageResponse = await fetch(`/api/events/${event.id}/images`, {
+              method: "POST",
+              body: imageFormData,
+              credentials: "include", // Include cookies for authentication
+            });
+
+            if (!imageResponse.ok) {
+              let errorMessage = `Failed to upload ${file.name}`;
+              let errorDetails: unknown = null;
+              
+              try {
+                // Check if response has content
+                const contentType = imageResponse.headers.get("content-type");
+                const contentLength = imageResponse.headers.get("content-length");
+                
+                if (contentType?.includes("application/json") && contentLength !== "0") {
+                  const text = await imageResponse.text();
+                  if (text && text.trim()) {
+                    errorDetails = JSON.parse(text);
+                    const parsedDetails = errorDetails as Record<string, unknown>;
+                    errorMessage =
+                      (typeof parsedDetails.error === "string" && parsedDetails.error) ||
+                      (typeof parsedDetails.message === "string" && parsedDetails.message) ||
+                      errorMessage;
+                  } else {
+                    errorMessage = `${errorMessage}: ${imageResponse.status} ${imageResponse.statusText || "Unknown error"}`;
+                  }
+                } else {
+                  // Try to get text response
+                  const text = await imageResponse.text();
+                  if (text && text.trim()) {
+                    errorMessage = text;
+                  } else {
+                    errorMessage = `${errorMessage}: ${imageResponse.status} ${imageResponse.statusText || "Unknown error"}`;
+                  }
+                }
+              } catch (parseError) {
+                // If parsing fails, use status info
+                errorMessage = `${errorMessage}: ${imageResponse.status} ${imageResponse.statusText || "Unknown error"}`;
+                console.error("Error parsing response:", parseError);
+              }
+              
+              uploadErrors.push(errorMessage);
+              console.error("Failed to upload image:", {
+                fileName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                status: imageResponse.status,
+                statusText: imageResponse.statusText,
+                error: errorMessage,
+                errorDetails: errorDetails,
+                url: imageResponse.url,
+              });
+            } else {
+              // Success - verify response
+              try {
+                const responseData = await imageResponse.json();
+                console.log("Image uploaded successfully:", {
+                  fileName: file.name,
+                  response: responseData,
+                });
+              } catch {
+                console.warn("Could not parse success response, but status was OK:", {
+                  fileName: file.name,
+                  status: imageResponse.status,
+                });
+              }
+            }
+          } catch (fileError) {
+            const errorMsg = fileError instanceof Error ? fileError.message : `Failed to upload ${file.name}`;
+            uploadErrors.push(errorMsg);
+            console.error(`Error uploading ${file.name}:`, fileError);
+          }
+        }
+
+        if (uploadErrors.length > 0) {
+          alert(`Some images failed to upload:\n${uploadErrors.join("\n")}\n\nThe event was created, but you may want to add images later.`);
+        }
+      }
+
+      setSelectedImages([]);
+      alert("Event created successfully!");
+      router.push("/events");
+    } catch (error: unknown) {
+      console.error("Error creating event:", error);
+      const message = error instanceof Error ? error.message : "Failed to create event. Please try again.";
+      alert(message);
     } finally {
       setSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center transition-colors duration-300">
+        <p className="text-gray-600 dark:text-slate-400">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!isOrganizer) {
+    return null;
+  }
+
   return (
-    <div className="relative min-h-screen bg-gray-50">
+    <div className="relative min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
       <div className="pointer-events-none absolute bottom-0 right-[80px] hidden md:block" aria-hidden="true">
         <Image src="/terrier_4.png" alt="Boston terriers" width={200} height={200} priority />
       </div>
       <div className="mx-auto flex w-11/12 max-w-4xl flex-col pb-12 pt-10">
         <div className="flex flex-col items-center text-center">
-          <h1 className="text-4xl font-semibold text-gray-900">Post leftover food</h1>
-          <p className="mt-3 text-xl italic text-gray-600">
-            Share your event’s extra servings so classmates can swing by before it’s gone.
+          <h1 className="text-4xl font-semibold text-gray-900 dark:text-slate-100">Post leftover food</h1>
+          <p className="mt-3 text-xl italic text-gray-600 dark:text-slate-400">
+            Share your event&apos;s extra servings so classmates can swing by before it&apos;s gone.
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="mt-8 flex flex-col gap-5 rounded-3xl border border-gray-200 bg-white/90 p-8 shadow-sm"
-        >
+        <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-5 rounded-3xl border border-gray-200 dark:border-slate-700 bg-white/90 dark:bg-slate-800/90 p-8 shadow-sm transition-colors duration-300">
           <div className="w-full">
-            <label htmlFor="eventName" className="text-sm font-semibold text-gray-900">
+            <label htmlFor="eventName" className="text-sm font-semibold text-gray-900 dark:text-slate-100">
               Event name
             </label>
             <input
@@ -284,27 +316,34 @@ export default function Post() {
               placeholder="Hackathon showcase lunch"
               value={formData.eventName}
               onChange={handleChange}
+              required
               className={`${inputClasses} mt-2`}
             />
           </div>
 
           <div className="w-full">
-            <label htmlFor="eventLocation" className="text-sm font-semibold text-gray-900">
+            <label htmlFor="locationId" className="text-sm font-semibold text-gray-900 dark:text-slate-100">
               Location
             </label>
-            <input
-              id="eventLocation"
-              name="eventLocation"
-              type="text"
-              placeholder="Building or area"
-              value={formData.eventLocation}
+            <select
+              id="locationId"
+              name="locationId"
+              value={formData.locationId}
               onChange={handleChange}
+              required
               className={`${inputClasses} mt-2`}
-            />
+            >
+              <option value="">Select a location</option>
+              {locations.map((location) => (
+                <option key={location.id} value={location.id}>
+                  {location.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="w-full">
-            <label htmlFor="roomNumber" className="text-sm font-semibold text-gray-900">
+            <label htmlFor="roomNumber" className="text-sm font-semibold text-gray-900 dark:text-slate-100">
               Room or pickup spot
             </label>
             <input
@@ -318,61 +357,99 @@ export default function Post() {
             />
           </div>
 
-          <div className="w-full">
-            <label htmlFor="eventDate" className="text-sm font-semibold text-gray-900">
-              Date & time
-            </label>
-            <input
-              id="eventDate"
-              name="eventDate"
-              type="text"
-              placeholder="March 12, 2:00 PM"
-              value={formData.eventDate}
-              onChange={handleChange}
-              className={`${inputClasses} mt-2`}
-            />
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-2">
+          <div className="grid gap-5 md:grid-cols-3">
             <div>
-              <label htmlFor="foodType" className="text-sm font-semibold text-gray-900">
-                Dietary type
-              </label>
-              <select
-                id="foodType"
-                name="foodType"
-                value={formData.foodType}
-                onChange={handleChange}
-                className={`${inputClasses} mt-2`}
-              >
-                <option value="">Select a type</option>
-                <option value="halal">Halal</option>
-                <option value="kosher">Kosher</option>
-                <option value="vegan">Vegan</option>
-                <option value="vegetarian">Vegetarian</option>
-                <option value="gluten-free">Gluten-free</option>
-              </select>
-            </div>
-            <div>
-              <label htmlFor="quantity" className="text-sm font-semibold text-gray-900">
-                Estimated servings
+              <label htmlFor="eventDate" className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                Date
               </label>
               <input
-                id="quantity"
-                name="quantity"
-                type="number"
-                min={0}
-                step={1}
-                placeholder="25"
-                value={formData.quantity}
+                id="eventDate"
+                name="eventDate"
+                type="date"
+                value={formData.eventDate}
                 onChange={handleChange}
+                required
+                className={`${inputClasses} mt-2`}
+              />
+            </div>
+            <div>
+              <label htmlFor="startTime" className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                Start Time
+              </label>
+              <input
+                id="startTime"
+                name="startTime"
+                type="time"
+                value={formData.startTime}
+                onChange={handleChange}
+                required
+                className={`${inputClasses} mt-2`}
+              />
+            </div>
+            <div>
+              <label htmlFor="endTime" className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+                End Time
+              </label>
+              <input
+                id="endTime"
+                name="endTime"
+                type="time"
+                value={formData.endTime}
+                onChange={handleChange}
+                required
                 className={`${inputClasses} mt-2`}
               />
             </div>
           </div>
 
           <div className="w-full">
-            <label htmlFor="eventDescription" className="text-sm font-semibold text-gray-900">
+            <label className="text-sm font-semibold text-gray-900 dark:text-slate-100 mb-2 block">Food Categories</label>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {FOOD_CATEGORIES.map((category) => (
+                <label
+                  key={category.value}
+                  className="flex items-center gap-2 cursor-pointer p-2 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors duration-200"
+                  style={{
+                    borderColor: formData.foodCategories.includes(category.value as FoodCategory)
+                      ? FOOD_CATEGORY_COLORS[category.value as FoodCategory]
+                      : undefined,
+                    backgroundColor: formData.foodCategories.includes(category.value as FoodCategory)
+                      ? `${FOOD_CATEGORY_COLORS[category.value as FoodCategory]}20` // Light background for selected
+                      : undefined,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.foodCategories.includes(category.value as FoodCategory)}
+                    onChange={() => toggleFoodCategory(category.value as FoodCategory)}
+                    className="h-4 w-4 rounded border-gray-300 dark:border-slate-600 text-red-600 focus:ring-red-500 dark:focus:ring-red-400 bg-white dark:bg-slate-900"
+                  />
+                  <span className="text-sm text-gray-700 dark:text-slate-300">{category.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="w-full">
+            <label htmlFor="quantity" className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+              Estimated servings
+            </label>
+            <input
+              id="quantity"
+              name="quantity"
+              type="number"
+              min={1}
+              step={1}
+              placeholder="25"
+              value={formData.quantity}
+              onChange={handleChange}
+              required
+              className={`${inputClasses} mt-2`}
+            />
+          </div>
+
+          <div className="w-full">
+            <label htmlFor="eventDescription" className="text-sm font-semibold text-gray-900 dark:text-slate-100">
               Description & pickup notes
             </label>
             <textarea
@@ -387,8 +464,8 @@ export default function Post() {
           </div>
 
           <div className="w-full">
-            <label htmlFor="eventTags" className="text-sm font-semibold text-gray-900">
-              Tags
+            <label htmlFor="eventTags" className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+              Tags (comma-separated)
             </label>
             <input
               id="eventTags"
@@ -399,151 +476,67 @@ export default function Post() {
               onChange={handleChange}
               className={`${inputClasses} mt-2`}
             />
-            <p className="mt-2 text-xs text-gray-500">Separate tags with commas</p>
           </div>
 
           <div className="w-full">
-            <label htmlFor="eventImage" className="text-sm font-semibold text-gray-900">
-              Event Image
+            <label htmlFor="eventImages" className="text-sm font-semibold text-gray-900 dark:text-slate-100">
+              Images (up to 5, max 5MB each)
             </label>
-            <div className="mt-2 space-y-3">
-              {imagePreview ? (
-                <div className="relative">
-                  <div className="relative h-48 w-full overflow-hidden rounded-2xl border border-gray-200">
-                    <Image
-                      src={imagePreview}
-                      alt="Preview"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleRemoveImage}
-                    className="absolute top-2 right-2 rounded-full bg-red-600 p-2 text-white shadow-sm hover:bg-red-700"
+            <input
+              id="eventImages"
+              name="eventImages"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              multiple
+              onChange={handleImageUpload}
+              disabled={submitting}
+              className={`${inputClasses} mt-2`}
+            />
+            <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
+              Optional, but photos help events stand out. JPEG, PNG, WebP, or GIF. You can add{" "}
+              {Math.max(0, 5 - selectedImages.length)} more.
+            </p>
+            {selectedImages.length > 0 && (
+              <div className="mt-3 space-y-2 rounded-xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 p-3 transition-colors duration-300">
+                {selectedImages.map((file, index) => (
+                  <div
+                    key={`${file.name}-${index}`}
+                    className="flex items-center justify-between gap-3 text-sm text-gray-700 dark:text-slate-300"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center justify-center w-full">
-                  <label
-                    htmlFor="file-upload"
-                    className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition"
-                  >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <svg
-                        className="w-10 h-10 mb-3 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                        />
-                      </svg>
-                      <p className="mb-2 text-sm text-gray-500">
-                        <span className="font-semibold">Click to upload</span> or drag and drop
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">{file.name}</p>
+                      <p className="text-xs text-gray-500 dark:text-slate-400">
+                        {(file.size / 1024).toFixed(0)} KB
                       </p>
-                      <p className="text-xs text-gray-500">PNG, JPG, GIF, WebP (MAX. 5MB)</p>
                     </div>
-                    <input
-                      id="file-upload"
-                      ref={fileInputRef}
-                      type="file"
-                      className="hidden"
-                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                      onChange={handleFileChange}
-                    />
-                  </label>
-                </div>
-              )}
-              {!imagePreview && (
-                <div className="mt-2">
-                  <p className="text-xs text-gray-500 mb-2">Or enter an image URL:</p>
-                  <input
-                    id="eventImage"
-                    name="eventImage"
-                    type="url"
-                    placeholder="https://example.com/photo.jpg"
-                    value={formData.eventImage}
-                    onChange={handleChange}
-                    className={inputClasses}
-                  />
-                </div>
-              )}
-            </div>
-            <p className="mt-2 text-xs text-gray-500">Optional, but photos help events stand out.</p>
-          <div className="grid gap-5 md:grid-cols-2">
-            <div>
-              <label htmlFor="eventTags" className="text-sm font-semibold text-gray-900">
-                Tags
-              </label>
-              <input
-                id="eventTags"
-                name="eventTags"
-                type="text"
-                placeholder="pizza, vegetarian, study break"
-                value={formData.eventTags}
-                onChange={handleChange}
-                className={`${inputClasses} mt-2`}
-              />
-            </div>
-            <div>
-              <label htmlFor="eventImage" className="text-sm font-semibold text-gray-900">
-                Image URL
-              </label>
-              <input
-                id="eventImage"
-                name="eventImage"
-                type="url"
-                placeholder="https://example.com/photo.jpg"
-                value={formData.eventImage}
-                onChange={handleChange}
-                className={`${inputClasses} mt-2`}
-              />
-              <p className="mt-2 text-xs text-gray-500">Optional, but photos help events stand out.</p>
-            </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index)}
+                      className="text-xs font-semibold text-red-600 hover:text-red-700 dark:hover:text-red-500 transition-colors duration-200"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  Images upload once you submit this event.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col items-center gap-3 pt-4">
-            <p className="text-sm text-gray-500">Posts go live instantly. Edit or delete from your profile anytime.</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">Posts go live instantly. Edit or delete from your profile anytime.</p>
             <button
               type="submit"
-              disabled={submitting || uploading}
-              className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-8 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={submitting}
+              className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-8 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-red-500 disabled:opacity-50"
             >
-              {uploading ? "Uploading image..." : submitting ? "Creating event..." : "Post event"}
-              className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-8 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-red-500"
-            >
-              Post event
+              {submitting ? "Posting..." : "Post event"}
             </button>
           </div>
         </form>
       </div>
-
-      <Modal
-        isOpen={modal.isOpen}
-        onClose={() => setModal({ ...modal, isOpen: false })}
-        type={modal.type}
-        title={modal.title}
-        message={modal.message}
-        autoClose={modal.type === "success" ? 2000 : undefined}
-      />
     </div>
   );
 }

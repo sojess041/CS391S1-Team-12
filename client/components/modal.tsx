@@ -70,31 +70,31 @@ export default function Modal({
   const typeStyles = {
     success: {
       icon: FiCheckCircle,
-      iconColor: "text-green-600",
-      bgColor: "bg-green-50",
-      borderColor: "border-green-200",
-      titleColor: "text-green-900",
+      iconColor: "text-green-600 dark:text-green-400",
+      bgColor: "bg-green-50 dark:bg-green-900/30",
+      borderColor: "border-green-200 dark:border-green-800",
+      titleColor: "text-green-900 dark:text-green-300",
     },
     error: {
       icon: FiAlertCircle,
-      iconColor: "text-red-600",
-      bgColor: "bg-red-50",
-      borderColor: "border-red-200",
-      titleColor: "text-red-900",
+      iconColor: "text-red-600 dark:text-red-400",
+      bgColor: "bg-red-50 dark:bg-red-900/30",
+      borderColor: "border-red-200 dark:border-red-800",
+      titleColor: "text-red-900 dark:text-red-300",
     },
     warning: {
       icon: FiAlertCircle,
-      iconColor: "text-yellow-600",
-      bgColor: "bg-yellow-50",
-      borderColor: "border-yellow-200",
-      titleColor: "text-yellow-900",
+      iconColor: "text-yellow-600 dark:text-yellow-400",
+      bgColor: "bg-yellow-50 dark:bg-yellow-900/30",
+      borderColor: "border-yellow-200 dark:border-yellow-800",
+      titleColor: "text-yellow-900 dark:text-yellow-300",
     },
     info: {
       icon: FiInfo,
-      iconColor: "text-blue-600",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-200",
-      titleColor: "text-blue-900",
+      iconColor: "text-blue-600 dark:text-blue-400",
+      bgColor: "bg-blue-50 dark:bg-blue-900/30",
+      borderColor: "border-blue-200 dark:border-blue-800",
+      titleColor: "text-blue-900 dark:text-blue-300",
     },
   };
 
@@ -129,7 +129,7 @@ export default function Modal({
         {showCloseButton && (
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 rounded-lg p-1 text-gray-400 hover:bg-white/50 hover:text-gray-600 transition-colors"
+            className="absolute right-4 top-4 rounded-lg p-1 text-gray-400 dark:text-slate-500 hover:bg-white/50 dark:hover:bg-slate-700/50 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
             aria-label="Close"
           >
             <FiX className="h-5 w-5" />
@@ -147,7 +147,7 @@ export default function Modal({
                   {title}
                 </h3>
               )}
-              <p className="text-gray-700 whitespace-pre-line">{message}</p>
+              <p className="text-gray-700 dark:text-slate-300 whitespace-pre-line">{message}</p>
             </div>
           </div>
 
@@ -156,12 +156,12 @@ export default function Modal({
               onClick={onClose}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                 type === "success"
-                  ? "bg-green-600 text-white hover:bg-green-700"
+                  ? "bg-green-600 text-white hover:bg-green-700 dark:hover:bg-green-500"
                   : type === "error"
-                  ? "bg-red-600 text-white hover:bg-red-700"
+                  ? "bg-red-600 text-white hover:bg-red-700 dark:hover:bg-red-500"
                   : type === "warning"
-                  ? "bg-yellow-600 text-white hover:bg-yellow-700"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
+                  ? "bg-yellow-600 text-white hover:bg-yellow-700 dark:hover:bg-yellow-500"
+                  : "bg-blue-600 text-white hover:bg-blue-700 dark:hover:bg-blue-500"
               }`}
             >
               OK

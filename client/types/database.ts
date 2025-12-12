@@ -62,3 +62,23 @@ export interface EventWithOrganizer extends Event {
   };
 }
 
+export type FoodCategory = 
+  | 'vegetarian'
+  | 'vegan'
+  | 'halal'
+  | 'kosher'
+  | 'gluten-free'
+  | 'dairy-free'
+  | 'nut-free'
+  | 'OTHER';
+
+export interface Location {
+  id: string;
+  name: string;
+  slug: string;
+  lat: number;
+  lng: number;
+  type: string;
+  is_active: boolean;
+}
+

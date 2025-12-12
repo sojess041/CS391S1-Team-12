@@ -85,11 +85,6 @@ export default function LoginPage() {
         console.error("Failed to create user profile");
       }
     }
-      alert(error.message);
-      return;
-    }
-
-    router.replace("/profile");
   };
 
   useEffect(() => {
@@ -110,15 +105,15 @@ export default function LoginPage() {
 
   return (
     checkingAuth ? null : (
-    <div className="w-full max-w-3xl border border-gray-200 rounded-xl shadow-md p-10 sm:p-16 mx-auto mt-12">
-      <h1 className="text-2xl font-semibold text-center">
-        Log In to <span className="text-red-600">Spark</span>!Bytes
+    <div className="w-full max-w-3xl border border-gray-200 dark:border-slate-700 rounded-xl shadow-md bg-white dark:bg-slate-800 p-10 sm:p-16 mx-auto mt-12 transition-colors duration-300">
+      <h1 className="text-2xl font-semibold text-center text-gray-900 dark:text-slate-100">
+        Log In to <span className="text-red-600 dark:text-red-500">Spark</span>!Bytes
       </h1>
-      <p className="italic text-center mt-2">Please log in to your account to reserve food and post events.</p>
+      <p className="italic text-center mt-2 text-gray-600 dark:text-slate-400">Please log in to your account to reserve food and post events.</p>
 
       <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
         <div className="w-full">
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
             Email
           </label>
           <input
@@ -129,13 +124,13 @@ export default function LoginPage() {
             required
             value={form.email}
             onChange={handleChange}
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none"
+            className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400 transition"
             placeholder="you@example.com"
           />
         </div>
 
         <div className="w-full">
-          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
             Password
           </label>
           <div className="relative">
@@ -147,13 +142,13 @@ export default function LoginPage() {
               required
               value={form.password}
               onChange={handleChange}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:outline-none"
+              className="w-full border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400 transition"
               placeholder="••••••••"
             />
             <button
               type="button"
               onClick={() => setShowPwd((s) => !s)}
-              className="absolute inset-y-0 right-2 my-auto p-1 text-gray-600"
+              className="absolute inset-y-0 right-2 my-auto p-1 text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-300 transition"
             >
               {showPwd ? <FiEyeOff className="h-5 w-5" /> : <FiEye className="h-5 w-5" />}
             </button>
@@ -161,17 +156,17 @@ export default function LoginPage() {
         </div>
 
         <div className="flex items-center justify-between">
-          <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+          <label className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300">
             <input
               type="checkbox"
               name="remember"
               checked={form.remember}
               onChange={handleChange}
-              className="h-4 w-4 rounded border-gray-300"
+              className="h-4 w-4 rounded border-gray-300 dark:border-slate-600 text-red-600 dark:text-red-500 focus:ring-red-500 dark:focus:ring-red-400 bg-white dark:bg-slate-900 transition"
             />
             Remember me
           </label>
-          <a href="#" className="text-sm text-gray-600 hover:text-gray-800 underline underline-offset-4">
+          <a href="#" className="text-sm text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-300 underline underline-offset-4 transition">
             Forgot password?
           </a>
         </div>
@@ -180,14 +175,13 @@ export default function LoginPage() {
           type="submit"
           disabled={loading}
           className="mt-2 w-full rounded-lg bg-red-600 text-white font-semibold py-2 shadow-sm hover:shadow-md transition-shadow disabled:opacity-50 disabled:cursor-not-allowed"
-          className="mt-2 w-full rounded-lg bg-red-600 text-white font-semibold py-2 shadow-sm hover:shadow-md transition-shadow"
         >
           {loading ? "Signing in..." : "Sign in"}
         </button>
 
-        <p className="text-center mt-5 text-sm text-gray-700">
+        <p className="text-center mt-5 text-sm text-gray-700 dark:text-slate-300">
           Don&#39;t have an account?{" "}
-          <Link href="/signup" className="font-medium text-red-600 hover:text-red-700 underline underline-offset-4">
+          <Link href="/signup" className="font-medium text-red-600 dark:text-red-500 hover:text-red-700 dark:hover:text-red-400 underline underline-offset-4 transition">
             Sign up
           </Link>
         </p>

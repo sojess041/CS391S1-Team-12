@@ -37,19 +37,6 @@ export default function Home() {
       setLoadingEvents(true);
       setEventsError(null);
       
-      // Check if Supabase is configured
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      
-      if (!supabaseUrl || !supabaseKey) {
-        const missing = [];
-        if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL');
-        if (!supabaseKey) missing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
-        setEventsError(`Supabase is not configured. Missing: ${missing.join(', ')}. Please check your .env.local file.`);
-        setLoadingEvents(false);
-        return;
-      }
-      
       try {
         const { data, error } = await supabase
           .from("events")
@@ -82,10 +69,10 @@ export default function Home() {
             message: error.message,
             details: error.details,
             hint: error.hint,
-            code: error.code
+            code: error.code,
+            error: error
           });
           throw new Error(error.message || "Failed to fetch events from database");
-          throw error;
         }
 
         const rows = (data ?? []) as unknown as EventsQueryRow[];
@@ -145,7 +132,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
       <div className="flex flex-col items-center">
         <motion.main
           initial={{ opacity: 0, y: 30 }}
@@ -157,11 +144,11 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1, ease: "easeOut" }}
-            className="font-semibold text-6xl leading-tight tracking-tight text-gray-900"
+            className="font-semibold text-6xl leading-tight tracking-tight text-gray-900 dark:text-slate-100"
           >
             Find{" "}
             <motion.span
-              className="inline-block uppercase text-red-600 italic font-thin"
+              className="inline-block uppercase text-red-600 dark:text-red-500 italic font-thin"
               animate={{ scale: [1, 1.05, 1], rotate: [0, 1.5, 0] }}
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
             >
@@ -170,7 +157,7 @@ export default function Home() {
             Food Around Campus!
           </motion.h1>
           <motion.p
-            className="mt-4 text-3xl font-normal italic text-gray-600"
+            className="mt-4 text-3xl font-normal italic text-gray-600 dark:text-slate-400"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.2, ease: "easeOut" }}
@@ -190,9 +177,9 @@ export default function Home() {
               onChange={handleChange}
               id="eventInput"
               placeholder="Search..."
-              className="w-full rounded-full border border-gray-200 bg-white/80 pl-8 pr-16 py-4 text-lg text-gray-900 shadow-lg focus:outline-none"
+              className="w-full rounded-full border border-gray-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 pl-8 pr-16 py-4 text-lg text-gray-900 dark:text-slate-100 shadow-lg focus:outline-none focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/20 placeholder:text-gray-500 dark:placeholder:text-slate-400 transition"
             />
-            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-500">
+            <span className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 dark:text-slate-400">
               <FaSearch className="h-5 w-5" aria-hidden="true" />
             </span>
           </motion.label>
@@ -207,10 +194,10 @@ export default function Home() {
         </motion.main>
       </div>
       <section className="mt-10 w-full px-6">
-        {loadingEvents && <p className="text-center text-gray-600">Loading events...</p>}
-        {!loadingEvents && eventsError && <p className="text-center text-red-600">{eventsError}</p>}
+        {loadingEvents && <p className="text-center text-gray-600 dark:text-slate-400">Loading events...</p>}
+        {!loadingEvents && eventsError && <p className="text-center text-red-600 dark:text-red-400">{eventsError}</p>}
         {!loadingEvents && !eventsError && events.length === 0 && (
-          <p className="text-center text-gray-600">No active events available right now.</p>
+          <p className="text-center text-gray-600 dark:text-slate-400">No active events available right now.</p>
         )}
         {!loadingEvents && !eventsError && events.length > 0 && <EventMarquee events={events} />}
       </section>
