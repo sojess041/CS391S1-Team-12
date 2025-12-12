@@ -72,7 +72,7 @@ export default function EventCard({
           >
             {eventName}
           </Link>
-          <button type="button" aria-label="Bookmark event">
+          <button type="button" aria-label="Bookmark event" className="shrink-0">
             <FaRegBookmark className="h-8 w-8 text-black dark:text-slate-300 hover:fill-red-600 dark:hover:fill-red-500 transition" />
           </button>
         </div>
