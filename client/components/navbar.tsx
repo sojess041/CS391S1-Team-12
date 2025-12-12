@@ -4,16 +4,44 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "@/lib/theme-provider";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function Navbar() {
   const pathname = usePathname();
   const { theme } = useTheme();
+  const [isOrganizer, setIsOrganizer] = useState(false);
+  const [loading, setLoading] = useState(true);
   const accountPaths = ["/login", "/signup", "/profile"];
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: userData } = await supabase
+            .from("users")
+            .select("role")
+            .eq("id", user.id)
+            .single();
+          
+          setIsOrganizer(userData?.role === "organizer");
+        }
+      } catch (error) {
+        console.error("Error checking user role:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkUserRole();
+  }, []);
+
   const links = [
     { href: "/", label: "Explore" },
     { href: "/events", label: "Events" },
     { href: "/map", label: "Map" },
-    { href: "/post", label: "Post" },
+    ...(isOrganizer ? [{ href: "/post", label: "Post" }] : []),
     { href: "/about", label: "About" },
     { href: "/login", label: <FaCircleUser /> },
   ];

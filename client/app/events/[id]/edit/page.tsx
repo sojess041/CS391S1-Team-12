@@ -1,21 +1,27 @@
 "use client";
+
 import Image from "next/image";
 import { useState, FormEvent, ChangeEvent, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getEventById, updateEvent } from "@/lib/db";
 import { Location, FoodCategory } from "@/types/database";
 import { FOOD_CATEGORIES, FOOD_CATEGORY_COLORS } from "@/lib/constants";
-import confetti from "canvas-confetti";
+import Modal, { ModalType } from "@/components/modal";
 
 const inputClasses =
   "w-full rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-base text-gray-900 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:border-red-400 dark:focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/20 transition";
 
-export default function Post() {
+export default function EditEventPage() {
+  const params = useParams();
   const router = useRouter();
+  const eventId = params.id as string;
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [isOrganizer, setIsOrganizer] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [selectedImages, setSelectedImages] = useState<File[]>([]);
   const [formData, setFormData] = useState({
     eventName: "",
@@ -29,46 +35,111 @@ export default function Post() {
     eventDescription: "",
     eventTags: "",
   });
+  const [modal, setModal] = useState<{
+    isOpen: boolean;
+    type: ModalType;
+    title?: string;
+    message: string;
+  }>({
+    isOpen: false,
+    type: "info",
+    message: "",
+  });
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const loadEventData = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        router.replace("/login");
-        return;
+        if (!user) {
+          router.replace("/login");
+          return;
+        }
+
+        // Fetch event
+        const eventData = await getEventById(eventId);
+        if (!eventData) {
+          setModal({
+            isOpen: true,
+            type: "error",
+            title: "Event Not Found",
+            message: "The event you're trying to edit doesn't exist.",
+          });
+          setTimeout(() => router.push("/events"), 2000);
+          return;
+        }
+
+        // Check if user is the owner
+        if (eventData.organizer_id !== user.id) {
+          setModal({
+            isOpen: true,
+            type: "error",
+            title: "Access Denied",
+            message: "You can only edit your own events.",
+          });
+          setTimeout(() => router.push(`/events/${eventId}`), 2000);
+          return;
+        }
+
+        setIsOwner(true);
+
+        // Fetch locations
+        const { data: locationsData } = await supabase
+          .from("locations")
+          .select("*")
+          .eq("is_active", true)
+          .order("name");
+
+        setLocations(locationsData || []);
+
+        // Populate form with event data
+        const eventDate = new Date(eventData.event_date);
+        const dateStr = eventDate.toISOString().split("T")[0];
+
+        // Get location_id from event or find by name
+        let locationId = (eventData as any).location_id || "";
+        if (!locationId && eventData.event_location && locationsData) {
+          const matchingLocation = locationsData.find(loc => loc.name === eventData.event_location);
+          if (matchingLocation) {
+            locationId = matchingLocation.id;
+          }
+        }
+
+        setFormData({
+          eventName: eventData.event_name,
+          locationId: locationId,
+          roomNumber: eventData.room_number || "",
+          eventDate: dateStr,
+          startTime: eventData.start_time,
+          endTime: eventData.end_time,
+          foodCategories: (eventData.food_categories || []) as FoodCategory[],
+          quantity: eventData.quantity,
+          eventDescription: eventData.event_description || "",
+          eventTags: Array.isArray(eventData.event_tags) ? eventData.event_tags.join(", ") : "",
+        });
+
+        if (eventData.event_image) {
+          setExistingImages([eventData.event_image]);
+        }
+      } catch (error) {
+        console.error("Error loading event:", error);
+        setModal({
+          isOpen: true,
+          type: "error",
+          title: "Error",
+          message: "Failed to load event data. Please try again.",
+        });
+      } finally {
+        setLoading(false);
       }
-
-      // Check if user is organizer
-      const { data: userData } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      const canPost = userData?.role === "organizer";
-      setIsOrganizer(canPost);
-
-      if (!canPost) {
-        router.replace("/events");
-        return;
-      }
-
-      // Fetch locations
-      const { data: locationsData } = await supabase
-        .from("locations")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
-
-      setLocations(locationsData || []);
-      setLoading(false);
     };
 
-    checkAuth();
-  }, [router]);
+    if (eventId) {
+      loadEventData();
+    }
+  }, [eventId, router]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -91,7 +162,7 @@ export default function Post() {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
 
-    const remainingSlots = 5 - selectedImages.length;
+    const remainingSlots = 5 - (existingImages.length + selectedImages.length);
     if (remainingSlots <= 0) {
       alert("Maximum 5 images per event");
       e.target.value = "";
@@ -99,23 +170,13 @@ export default function Post() {
     }
 
     const validFiles: File[] = [];
-    const oversizedFiles: string[] = [];
-
     files.slice(0, remainingSlots).forEach((file) => {
       if (file.size > 5 * 1024 * 1024) {
-        oversizedFiles.push(file.name);
+        alert(`${file.name} is too large (5MB max)`);
         return;
       }
       validFiles.push(file);
     });
-
-    if (files.length > remainingSlots) {
-      alert(`You can upload up to 5 images total. Skipped ${files.length - remainingSlots} file(s).`);
-    }
-
-    if (oversizedFiles.length > 0) {
-      alert(`These files are too large (5MB max): ${oversizedFiles.join(", ")}`);
-    }
 
     if (validFiles.length > 0) {
       setSelectedImages((prev) => [...prev, ...validFiles]);
@@ -123,8 +184,12 @@ export default function Post() {
     e.target.value = "";
   };
 
-  const handleRemoveImage = (index: number) => {
-    setSelectedImages((prev) => prev.filter((_, idx) => idx !== index));
+  const handleRemoveImage = (index: number, isExisting: boolean) => {
+    if (isExisting) {
+      setExistingImages((prev) => prev.filter((_, idx) => idx !== index));
+    } else {
+      setSelectedImages((prev) => prev.filter((_, idx) => idx !== index));
+    }
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -147,19 +212,16 @@ export default function Post() {
       // Get selected location
       const selectedLocation = locations.find((loc) => loc.id === formData.locationId);
 
-      // Combine food categories and tags
-      const allTags = [
-        ...formData.foodCategories,
-        ...(formData.eventTags
-          ? formData.eventTags.split(",").map((tag) => tag.trim()).filter(Boolean)
-          : []),
-      ];
+      // Parse tags
+      const tags = formData.eventTags
+        ? formData.eventTags.split(",").map((tag) => tag.trim()).filter(Boolean)
+        : [];
 
-      // Create event
-      const { data: event, error: eventError } = await supabase
-        .from("events")
-        .insert({
-          organizer_id: user.id,
+      // Update event
+      await updateEvent(
+        eventId,
+        user.id,
+        {
           event_name: formData.eventName,
           event_location: selectedLocation?.name || formData.locationId,
           room_number: formData.roomNumber || null,
@@ -167,19 +229,15 @@ export default function Post() {
           start_time: formData.startTime,
           end_time: formData.endTime,
           food_type: formData.foodCategories[0] || "OTHER",
+          food_categories: formData.foodCategories,
           quantity: formData.quantity,
-          quantity_remaining: formData.quantity,
           event_description: formData.eventDescription || null,
-          event_tags: allTags,
-        })
-        .select()
-        .single();
+          event_tags: tags,
+          location_id: formData.locationId || null,
+        }
+      );
 
-      if (eventError) {
-        throw eventError;
-      }
-
-      // Upload images if any
+      // Upload new images if any
       if (selectedImages.length > 0) {
         const uploadErrors: string[] = [];
         for (const file of selectedImages) {
@@ -187,126 +245,57 @@ export default function Post() {
           imageFormData.append("file", file);
 
           try {
-            const imageResponse = await fetch(`/api/events/${event.id}/images`, {
+            const imageResponse = await fetch(`/api/events/${eventId}/images`, {
               method: "POST",
               body: imageFormData,
-              credentials: "include", // Include cookies for authentication
+              credentials: "include",
             });
 
             if (!imageResponse.ok) {
               let errorMessage = `Failed to upload ${file.name}`;
-              let errorDetails: unknown = null;
-              
               try {
-                // Check if response has content
                 const contentType = imageResponse.headers.get("content-type");
-                const contentLength = imageResponse.headers.get("content-length");
-                
-                if (contentType?.includes("application/json") && contentLength !== "0") {
+                if (contentType?.includes("application/json")) {
                   const text = await imageResponse.text();
                   if (text && text.trim()) {
-                    errorDetails = JSON.parse(text);
-                    const parsedDetails = errorDetails as Record<string, unknown>;
-                    errorMessage =
-                      (typeof parsedDetails.error === "string" && parsedDetails.error) ||
-                      (typeof parsedDetails.message === "string" && parsedDetails.message) ||
-                      errorMessage;
-                  } else {
-                    errorMessage = `${errorMessage}: ${imageResponse.status} ${imageResponse.statusText || "Unknown error"}`;
-                  }
-                } else {
-                  // Try to get text response
-                  const text = await imageResponse.text();
-                  if (text && text.trim()) {
-                    errorMessage = text;
-                  } else {
-                    errorMessage = `${errorMessage}: ${imageResponse.status} ${imageResponse.statusText || "Unknown error"}`;
+                    const errorData = JSON.parse(text);
+                    errorMessage = errorData.error || errorData.message || errorMessage;
                   }
                 }
-              } catch (parseError) {
-                // If parsing fails, use status info
-                errorMessage = `${errorMessage}: ${imageResponse.status} ${imageResponse.statusText || "Unknown error"}`;
-                console.error("Error parsing response:", parseError);
-              }
-              
-              uploadErrors.push(errorMessage);
-              console.error("Failed to upload image:", {
-                fileName: file.name,
-                fileSize: file.size,
-                fileType: file.type,
-                status: imageResponse.status,
-                statusText: imageResponse.statusText,
-                error: errorMessage,
-                errorDetails: errorDetails,
-                url: imageResponse.url,
-              });
-            } else {
-              // Success - verify response
-              try {
-                const responseData = await imageResponse.json();
-                console.log("Image uploaded successfully:", {
-                  fileName: file.name,
-                  response: responseData,
-                });
               } catch {
-                console.warn("Could not parse success response, but status was OK:", {
-                  fileName: file.name,
-                  status: imageResponse.status,
-                });
+                // Use default error message
               }
+              uploadErrors.push(errorMessage);
             }
           } catch (fileError) {
-            const errorMsg = fileError instanceof Error ? fileError.message : `Failed to upload ${file.name}`;
-            uploadErrors.push(errorMsg);
-            console.error(`Error uploading ${file.name}:`, fileError);
+            uploadErrors.push(`Failed to upload ${file.name}`);
           }
         }
 
         if (uploadErrors.length > 0) {
-          alert(`Some images failed to upload:\n${uploadErrors.join("\n")}\n\nThe event was created, but you may want to add images later.`);
+          alert(`Some images failed to upload:\n${uploadErrors.join("\n")}`);
         }
       }
 
-      setSelectedImages([]);
-      
-      // Trigger red confetti animation
-      const duration = 3000;
-      const animationEnd = Date.now() + duration;
-      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+      setModal({
+        isOpen: true,
+        type: "success",
+        title: "Event Updated!",
+        message: "Your event has been updated successfully!",
+      });
 
-      function randomInRange(min: number, max: number) {
-        return Math.random() * (max - min) + min;
-      }
-
-      const interval = setInterval(() => {
-        const timeLeft = animationEnd - Date.now();
-
-        if (timeLeft <= 0) {
-          return clearInterval(interval);
-        }
-
-        const particleCount = 50 * (timeLeft / duration);
-        
-        confetti({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
-          colors: ['#DC2626', '#EF4444', '#F87171', '#FCA5A5'], // Red color palette
-        });
-        confetti({
-          ...defaults,
-          particleCount,
-          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
-          colors: ['#DC2626', '#EF4444', '#F87171', '#FCA5A5'], // Red color palette
-        });
-      }, 250);
-
-      alert("Event created successfully!");
-      router.push("/events");
+      setTimeout(() => {
+        router.push(`/events/${eventId}`);
+      }, 1500);
     } catch (error: unknown) {
-      console.error("Error creating event:", error);
-      const message = error instanceof Error ? error.message : "Failed to create event. Please try again.";
-      alert(message);
+      console.error("Error updating event:", error);
+      const message = error instanceof Error ? error.message : "Failed to update event. Please try again.";
+      setModal({
+        isOpen: true,
+        type: "error",
+        title: "Update Failed",
+        message,
+      });
     } finally {
       setSubmitting(false);
     }
@@ -315,19 +304,13 @@ export default function Post() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center transition-colors duration-300">
-        <p className="text-gray-600 dark:text-slate-400">Loading...</p>
+        <p className="text-gray-600 dark:text-slate-400">Loading event...</p>
       </div>
     );
   }
 
-  if (!isOrganizer) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-slate-900 flex items-center justify-center transition-colors duration-300">
-        <div className="text-center">
-          <p className="text-gray-600 dark:text-slate-400">Redirecting...</p>
-        </div>
-      </div>
-    );
+  if (!isOwner) {
+    return null;
   }
 
   return (
@@ -337,9 +320,9 @@ export default function Post() {
       </div>
       <div className="mx-auto flex w-11/12 max-w-4xl flex-col pb-12 pt-10">
         <div className="flex flex-col items-center text-center">
-          <h1 className="text-4xl font-semibold text-gray-900 dark:text-slate-100">Post leftover food</h1>
+          <h1 className="text-4xl font-semibold text-gray-900 dark:text-slate-100">Edit Event</h1>
           <p className="mt-3 text-xl italic text-gray-600 dark:text-slate-400">
-            Share your event&apos;s extra servings so classmates can swing by before it&apos;s gone.
+            Update your event details and information.
           </p>
         </div>
 
@@ -453,7 +436,7 @@ export default function Post() {
                       ? FOOD_CATEGORY_COLORS[category.value as FoodCategory]
                       : undefined,
                     backgroundColor: formData.foodCategories.includes(category.value as FoodCategory)
-                      ? `${FOOD_CATEGORY_COLORS[category.value as FoodCategory]}20` // Light background for selected
+                      ? `${FOOD_CATEGORY_COLORS[category.value as FoodCategory]}20`
                       : undefined,
                   }}
                 >
@@ -519,8 +502,32 @@ export default function Post() {
 
           <div className="w-full">
             <label htmlFor="eventImages" className="text-sm font-semibold text-gray-900 dark:text-slate-100">
-              Images (up to 5, max 5MB each)
+              Images (up to 5 total, max 5MB each)
             </label>
+            
+            {existingImages.length > 0 && (
+              <div className="mt-3 space-y-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 p-3">
+                <p className="text-sm font-semibold text-gray-700 dark:text-slate-300">Existing Images:</p>
+                {existingImages.map((imageUrl, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between gap-3 text-sm text-gray-700 dark:text-slate-300"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold">Image {index + 1}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index, true)}
+                      className="text-xs font-semibold text-red-600 hover:text-red-700 dark:hover:text-red-500 transition-colors duration-200"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <input
               id="eventImages"
               name="eventImages"
@@ -532,8 +539,8 @@ export default function Post() {
               className={`${inputClasses} mt-2`}
             />
             <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
-              Optional, but photos help events stand out. JPEG, PNG, WebP, or GIF. You can add{" "}
-              {Math.max(0, 5 - selectedImages.length)} more.
+              Optional. JPEG, PNG, WebP, or GIF. You can add{" "}
+              {Math.max(0, 5 - (existingImages.length + selectedImages.length))} more.
             </p>
             {selectedImages.length > 0 && (
               <div className="mt-3 space-y-2 rounded-xl border border-dashed border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 p-3 transition-colors duration-300">
@@ -550,32 +557,45 @@ export default function Post() {
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleRemoveImage(index)}
+                      onClick={() => handleRemoveImage(index, false)}
                       className="text-xs font-semibold text-red-600 hover:text-red-700 dark:hover:text-red-500 transition-colors duration-200"
                     >
                       Remove
                     </button>
                   </div>
                 ))}
-                <p className="text-xs text-gray-500 dark:text-slate-400">
-                  Images upload once you submit this event.
-                </p>
               </div>
             )}
           </div>
 
           <div className="flex flex-col items-center gap-3 pt-4">
-            <p className="text-sm text-gray-500 dark:text-slate-400">Posts go live instantly. Edit or delete from your profile anytime.</p>
             <button
               type="submit"
               disabled={submitting}
               className="inline-flex items-center justify-center rounded-2xl bg-red-600 px-8 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-red-500 disabled:opacity-50"
             >
-              {submitting ? "Posting..." : "Post event"}
+              {submitting ? "Updating..." : "Update Event"}
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push(`/events/${eventId}`)}
+              className="text-sm text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-300 transition-colors duration-200"
+            >
+              Cancel
             </button>
           </div>
         </form>
       </div>
+
+      <Modal
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        type={modal.type}
+        title={modal.title}
+        message={modal.message}
+        autoClose={modal.type === "success" ? 2000 : undefined}
+      />
     </div>
   );
 }
+

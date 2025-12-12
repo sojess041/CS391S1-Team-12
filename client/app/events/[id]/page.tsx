@@ -7,7 +7,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getEventById } from "@/lib/db";
 import { EventWithOrganizer } from "@/types/database";
-import { FaLocationDot, FaUtensils, FaUser, FaArrowLeft } from "react-icons/fa6";
+import { FaLocationDot, FaUtensils, FaUser, FaArrowLeft, FaEdit } from "react-icons/fa6";
 import { LuCalendarClock } from "react-icons/lu";
 import Modal, { ModalType } from "@/components/modal";
 
@@ -20,6 +20,7 @@ export default function EventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reserving, setReserving] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [modal, setModal] = useState<{
     isOpen: boolean;
     type: ModalType;
@@ -45,6 +46,12 @@ export default function EventDetailPage() {
           setError("Event not found");
         } else {
           setEvent(eventData);
+          
+          // Check if current user is the owner
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user && eventData.organizer_id === user.id) {
+            setIsOwner(true);
+          }
         }
       } catch (err: any) {
         console.error("Error fetching event:", err);
@@ -237,7 +244,14 @@ export default function EventDetailPage() {
               {/* Location */}
               <div className="flex items-center gap-2 text-gray-600 dark:text-slate-400">
                 <FaLocationDot className="h-5 w-5" />
-                <span className="font-medium">{event.event_location}</span>
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.event_location + (event.room_number ? ` Room ${event.room_number}` : '') + ' Boston University')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium hover:text-red-600 dark:hover:text-red-400 underline transition"
+                >
+                  {event.event_location}
+                </a>
                 {event.room_number && (
                   <>
                     <span className="text-gray-400 dark:text-slate-500">•</span>
@@ -289,18 +303,29 @@ export default function EventDetailPage() {
               </div>
             </div>
 
-            {/* Reserve Button */}
-            <button
-              onClick={handleReserve}
-              disabled={!canReserve || reserving}
-              className={`w-full rounded-2xl px-6 py-4 text-lg font-semibold text-white shadow-sm transition ${
-                canReserve && !reserving
-                  ? "bg-red-600 hover:bg-red-700 hover:shadow-md"
-                  : "bg-gray-400 cursor-not-allowed"
-              }`}
-            >
-              {reserving ? "Reserving..." : canReserve ? "Reserve a Plate" : "Event Full"}
-            </button>
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-3">
+              {isOwner && (
+                <Link
+                  href={`/events/${eventId}/edit`}
+                  className="flex items-center justify-center gap-2 rounded-2xl border-2 border-red-600 dark:border-red-500 px-6 py-3 text-lg font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                >
+                  <FaEdit className="h-5 w-5" />
+                  Edit Event
+                </Link>
+              )}
+              <button
+                onClick={handleReserve}
+                disabled={!canReserve || reserving}
+                className={`w-full rounded-2xl px-6 py-4 text-lg font-semibold text-white shadow-sm transition ${
+                  canReserve && !reserving
+                    ? "bg-red-600 hover:bg-red-700 hover:shadow-md"
+                    : "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
+                }`}
+              >
+                {reserving ? "Reserving..." : canReserve ? "Reserve a Plate" : "Event Full"}
+              </button>
+            </div>
           </div>
         </div>
       </div>

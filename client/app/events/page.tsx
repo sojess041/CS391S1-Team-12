@@ -328,7 +328,14 @@ export default function EventsPage() {
                               </p>
                               <h3 className="mt-1 text-2xl font-semibold text-gray-900 dark:text-slate-100">{event.eventName}</h3>
                               <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-                                {event.eventLocation}
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.eventLocation + (event.roomNumber ? ` Room ${event.roomNumber}` : '') + ' Boston University')}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="hover:text-red-600 dark:hover:text-red-400 underline transition"
+                                >
+                                  {event.eventLocation}
+                                </a>
                                 {event.roomNumber ? ` · Room ${event.roomNumber}` : ""}
                               </p>
                               {event.organizerName && (

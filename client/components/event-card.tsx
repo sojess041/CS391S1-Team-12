@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { EventCardProps } from "@/types/event";
@@ -42,7 +44,7 @@ export default function EventCard({
   const displayRoom = roomNumber ? `Room ${roomNumber}` : null;
 
   return (
-    <article className="overflow-hidden rounded-3xl bg-transparent shadow-xl flex flex-col h-full">
+    <article className="overflow-hidden rounded-3xl bg-transparent dark:bg-slate-800/50 shadow-xl flex flex-col h-full transition-colors duration-300">
       <div className="relative aspect-[4/3]">
         {eventImage ? (
           <Image
@@ -65,33 +67,35 @@ export default function EventCard({
         <div className="my-2 flex items-start justify-between gap-3">
           <Link
             href={id ? `/events/${id}` : "#"}
-            className="text-2xl font-extrabold leading-tight text-black min-h-[56px] flex-1 hover:text-red-600 transition cursor-pointer"
+            className="text-2xl font-extrabold leading-tight text-black dark:text-slate-100 min-h-[56px] flex-1 hover:text-red-600 dark:hover:text-red-500 transition cursor-pointer"
             style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
           >
             {eventName}
           </Link>
-          <h3
-            className="text-2xl font-extrabold leading-tight text-black min-h-[56px] flex-1"
-            style={{ display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}
-          >
-            {eventName}
-          </h3>
           <button type="button" aria-label="Bookmark event">
-            <FaRegBookmark className="h-8 w-8 text-black hover:fill-red-600" />
+            <FaRegBookmark className="h-8 w-8 text-black dark:text-slate-300 hover:fill-red-600 dark:hover:fill-red-500 transition" />
           </button>
         </div>
 
         <div className="min-h-[20px] flex items-center">
-          {organizerName && <p className="text-base font-medium text-black">{organizerName}</p>}
+          {organizerName && <p className="text-base font-medium text-black dark:text-slate-300">{organizerName}</p>}
         </div>
-        <div className="mt-1 text-sm text-black min-h-[40px] flex gap-2 items-start">
+        <div className="mt-1 text-sm text-black dark:text-slate-300 min-h-[40px] flex gap-2 items-start">
           <FaLocationDot className="mt-0.5 shrink-0" />
           <div className="flex-1 space-y-0.5 leading-snug min-h-[32px] flex flex-col justify-between">
-            <p className="truncate">{displayLocation}</p>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(eventLocation + (roomNumber ? ` Room ${roomNumber}` : '') + ' Boston University')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="truncate hover:text-red-600 dark:hover:text-red-400 underline transition"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {displayLocation}
+            </a>
             <p>{displayRoom ?? "\u00A0"}</p>
           </div>
         </div>
-        <div className="mt-1 text-sm text-black min-h-[28px] flex gap-2 items-start">
+        <div className="mt-1 text-sm text-black dark:text-slate-300 min-h-[28px] flex gap-2 items-start">
           <LuCalendarClock className="mt-0.5 shrink-0" />
           <p className="leading-tight min-h-[18px] flex items-center">
             {formattedDate} · {formattedStart} - {formattedEnd}
@@ -99,14 +103,14 @@ export default function EventCard({
         </div>
 
         <div className="mt-3 space-y-1">
-          <p className="flex items-center gap-2 text-base font-semibold text-black">
+          <p className="flex items-center gap-2 text-base font-semibold text-black dark:text-slate-100">
             <FaUtensils className="h-5 w-5 shrink-0" />
             {foodType}
           </p>
-          <p className="mt-1 text-sm text-black">
+          <p className="mt-1 text-sm text-black dark:text-slate-300">
             {quantityRemaining} of {quantity} servings remaining
           </p>
-          <p className="mt-2 text-sm text-gray-600 min-h-[54px] leading-snug">{descriptionText}</p>
+          <p className="mt-2 text-sm text-gray-600 dark:text-slate-400 min-h-[54px] leading-snug">{descriptionText}</p>
         </div>
 
         <div className="flex items-center gap-2 mt-auto">
@@ -115,7 +119,7 @@ export default function EventCard({
               {eventTags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700"
+                  className="inline-flex items-center rounded-full bg-red-100 dark:bg-red-900/30 px-3 py-1 text-xs font-semibold text-red-700 dark:text-red-300"
                 >
                   {tag}
                 </span>
@@ -124,7 +128,6 @@ export default function EventCard({
           )}
           <Link
             href={id ? `/events/${id}` : "/events"}
-            href="/events"
             className="ml-auto rounded-xl translate-x-6 bg-red-600 px-6 py-2 font-semibold text-white shadow-sm transition hover:scale-105"
           >
             View

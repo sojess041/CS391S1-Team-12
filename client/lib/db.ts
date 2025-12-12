@@ -129,6 +129,63 @@ export async function createEvent(eventData: {
   return data as Event;
 }
 
+// Update an existing event (only by organizer)
+export async function updateEvent(
+  eventId: string,
+  userId: string,
+  eventData: {
+    event_name?: string;
+    event_location?: string;
+    room_number?: string | null;
+    event_date?: string;
+    start_time?: string;
+    end_time?: string;
+    food_type?: string;
+    food_categories?: string[];
+    quantity?: number;
+    quantity_remaining?: number;
+    event_description?: string | null;
+    event_tags?: string[];
+    event_image?: string | null;
+    location_id?: string | null;
+  }
+): Promise<Event> {
+  // First verify the user owns this event
+  const { data: existingEvent, error: fetchError } = await supabase
+    .from('events')
+    .select('organizer_id')
+    .eq('id', eventId)
+    .single();
+
+  if (fetchError || !existingEvent) {
+    throw new Error('Event not found');
+  }
+
+  if (existingEvent.organizer_id !== userId) {
+    throw new Error('Unauthorized: You can only edit your own events');
+  }
+
+  // Update the event
+  const { data, error } = await supabase
+    .from('events')
+    .update({
+      ...eventData,
+      event_tags: eventData.event_tags !== undefined ? eventData.event_tags : undefined,
+      food_categories: eventData.food_categories !== undefined ? eventData.food_categories : undefined,
+    })
+    .eq('id', eventId)
+    .eq('organizer_id', userId) // Double-check ownership
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating event:', error);
+    throw error;
+  }
+
+  return data as Event;
+}
+
 // Get user by ID
 export async function getUserById(userId: string): Promise<User | null> {
   const { data, error } = await supabase

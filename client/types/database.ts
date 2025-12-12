@@ -33,6 +33,7 @@ export interface Event {
   start_time: string;
   end_time: string;
   food_type: string;
+  food_categories?: string[];
   quantity: number;
   quantity_remaining: number;
   event_description: string | null;
@@ -41,6 +42,7 @@ export interface Event {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  location_id?: string | null;
 }
 
 export interface Reservation {
