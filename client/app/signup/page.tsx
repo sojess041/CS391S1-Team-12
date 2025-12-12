@@ -170,15 +170,6 @@ export default function SignUpPage() {
         title: "Unexpected Error",
         message: "An unexpected error occurred. Please try again.",
       });
-          alert(msg);
-          return;
-        }
-      }
-
-      router.push("/login");
-    } catch (err) {
-      console.error(err);
-      alert("An unexpected error occurred. Please try again.");
     }
   };
 

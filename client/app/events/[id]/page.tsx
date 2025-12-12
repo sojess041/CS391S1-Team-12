@@ -7,7 +7,8 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { getEventById } from "@/lib/db";
 import { EventWithOrganizer } from "@/types/database";
-import { FaLocationDot, FaUtensils, FaUser, FaArrowLeft, FaEdit } from "react-icons/fa6";
+import { FaLocationDot, FaUtensils, FaUser, FaArrowLeft } from "react-icons/fa6";
+import { FaEdit } from "react-icons/fa";
 import { LuCalendarClock } from "react-icons/lu";
 import Modal, { ModalType } from "@/components/modal";
 
