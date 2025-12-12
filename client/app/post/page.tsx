@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Location, FoodCategory } from "@/types/database";
 import { FOOD_CATEGORIES, FOOD_CATEGORY_COLORS } from "@/lib/constants";
+import confetti from "canvas-confetti";
 
 const inputClasses =
   "w-full rounded-2xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-2.5 text-base text-gray-900 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:border-red-400 dark:focus:border-red-600 focus:outline-none focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/20 transition";
@@ -268,6 +269,39 @@ export default function Post() {
       }
 
       setSelectedImages([]);
+      
+      // Trigger red confetti animation
+      const duration = 3000;
+      const animationEnd = Date.now() + duration;
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+      function randomInRange(min: number, max: number) {
+        return Math.random() * (max - min) + min;
+      }
+
+      const interval = setInterval(() => {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+          return clearInterval(interval);
+        }
+
+        const particleCount = 50 * (timeLeft / duration);
+        
+        confetti({
+          ...defaults,
+          particleCount,
+          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+          colors: ['#DC2626', '#EF4444', '#F87171', '#FCA5A5'], // Red color palette
+        });
+        confetti({
+          ...defaults,
+          particleCount,
+          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+          colors: ['#DC2626', '#EF4444', '#F87171', '#FCA5A5'], // Red color palette
+        });
+      }, 250);
+
       alert("Event created successfully!");
       router.push("/events");
     } catch (error: unknown) {
